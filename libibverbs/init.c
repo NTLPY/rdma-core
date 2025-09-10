@@ -57,6 +57,7 @@
 #include "ibverbs.h"
 #include <infiniband/cmd_write.h>
 
+//!< ABI version of the InfiniBand devices
 int abi_ver;
 
 static uint32_t verbs_log_level;
@@ -77,6 +78,10 @@ void __verbs_log(struct verbs_context *ctx, uint32_t level,
 	}
 }
 
+/**
+ * Structure representing an InfiniBand driver entry, including its
+ * device operations.
+ */
 struct ibv_driver {
 	struct list_node	entry;
 	const struct verbs_device_ops *ops;
@@ -150,6 +155,25 @@ int setup_sysfs_uverbs(int uv_dirfd, const char *uverbs,
 	return 0;
 }
 
+/**
+ * Parse verbs_sysfs_dev from uverbs device path and append it to the provided list.
+ *
+ * Only below fields will be fetch:
+ * 1. Name of uverbs device
+ * 2. Device number
+ * 3. Name of InfiniBand device
+ * 4. Path to InfiniBand device in sysfs
+ * 5. Node type
+ * 6. Index of InfiniBand device is always -1
+ * 7. ABI version
+ * 8. Modified time of InfiniBand device
+ *
+ * @param[in] dirfd File descriptor of the directory containing uverbs devices in sysfs.
+ * @param[in] uverbs Name of uverbs device.
+ * @param[out] tmp_sysfs_dev_list Pointer to the list to which the sysfs device will be appended.
+ *
+ * @return 0 on success, or error code on failure.
+ */
 static int setup_sysfs_dev(int dirfd, const char *uverbs,
 			   struct list_head *tmp_sysfs_dev_list)
 {
@@ -201,6 +225,13 @@ err_alloc:
 	return 0;
 }
 
+/**
+ * Find devices from sysfs filesystem and add them to the provided list.
+ *
+ * @param[out] tmp_sysfs_dev_list Pointer to the list to which the sysfs device will be appended.
+ *
+ * @return 0 on success, or error code on failure.
+ */
 static int find_sysfs_devs(struct list_head *tmp_sysfs_dev_list)
 {
 	struct verbs_sysfs_dev *dev, *dev_tmp;
@@ -237,6 +268,14 @@ static int find_sysfs_devs(struct list_head *tmp_sysfs_dev_list)
 	return ret;
 }
 
+/**
+ * Register a new InfiniBand driver.
+ *
+ * This function registers a new InfiniBand driver with the verbs framework.
+ * @param[in] ops A pointer to the verbs_device_ops structure that defines the
+ * device operations for the InfiniBand driver.
+ * @see PROVIDER_DRIVER
+ */
 void verbs_register_driver(const struct verbs_device_ops *ops)
 {
 	struct ibv_driver *driver;
@@ -254,7 +293,13 @@ void verbs_register_driver(const struct verbs_device_ops *ops)
 	list_add_tail(&driver_list, &driver->entry);
 }
 
-/* Match a single modalias value */
+/**
+ * Check if the modalias or PCI matches specified entry.
+ *
+ * @param[in] ent Pointer to the verbs_match_ent structure representing the entry.
+ * @param[in] value The value to match against, can be modalias or PCI (pci:v<vendor>:<device>sv*).
+ * @return true if the value matches the entry, false otherwise.
+ */
 static bool match_modalias(const struct verbs_match_ent *ent, const char *value)
 {
 	char pci_ma[100];
@@ -297,7 +342,13 @@ match_modalias_device(const struct verbs_device_ops *ops,
 	return NULL;
 }
 
-/* Match the device name itself */
+/**
+ * Check if the device name matches the provider driver.
+ *
+ * @param[in] ops Pointer to the verbs_device_ops structure representing the provider driver.
+ * @param[in] sysfs_dev Pointer to the verbs_sysfs_dev structure representing the sysfs device.
+ * @return Pointer to the matching verbs_match_ent structure if a match is found, NULL otherwise
+ */
 static const struct verbs_match_ent *
 match_name(const struct verbs_device_ops *ops,
 		      struct verbs_sysfs_dev *sysfs_dev)
@@ -316,7 +367,9 @@ match_name(const struct verbs_device_ops *ops,
 	return NULL;
 }
 
-/* Match the driver id we get from netlink */
+/**
+ * Match the driver ID we get from netlink.
+ */
 static const struct verbs_match_ent *
 match_driver_id(const struct verbs_device_ops *ops,
 		struct verbs_sysfs_dev *sysfs_dev)
@@ -333,7 +386,25 @@ match_driver_id(const struct verbs_device_ops *ops,
 	return NULL;
 }
 
-/* True if the provider matches the selected rdma sysfs device */
+/**
+ * Check if the provider matches the selected rdma sysfs device.
+ *
+ * Check matched driver:
+ * 1. Match the driver ID from the sysfs device.
+ * 2. Match the name from the sysfs device.
+ * 3. Match the modalias from the sysfs device.
+ *
+ * If match_device is provided, it will be called to determine if the device matches.
+ *
+ * ABI version compatibility is also checked.
+ *
+ * @param[in] ops Pointer to the verbs_device_ops structure representing the provider driver.
+ * @param[in] sysfs_dev Pointer to the verbs_sysfs_dev structure representing the sysfs device.
+ * @return true if the provider matches the device, false otherwise.
+ *
+ * @see verbs_device_ops::match_table
+ * @see verbs_device_ops::match_device
+ */
 static bool match_device(const struct verbs_device_ops *ops,
 			 struct verbs_sysfs_dev *sysfs_dev)
 {
@@ -373,6 +444,14 @@ static bool match_device(const struct verbs_device_ops *ops,
 	return true;
 }
 
+/**
+ * Try to create a verbs_device for the given sysfs device using the specified
+ * driver operations.
+ *
+ * @param[in] ops Pointer to the verbs_device_ops structure representing the provider driver.
+ * @param[in] sysfs_dev Pointer to the verbs_sysfs_dev structure representing the sysfs device.
+ * @return Pointer to the created verbs_device structure, or NULL on failure.
+ */
 static struct verbs_device *try_driver(const struct verbs_device_ops *ops,
 				       struct verbs_sysfs_dev *sysfs_dev)
 {
@@ -436,6 +515,13 @@ err:
 	return NULL;
 }
 
+/**
+ * Try to create a verbs_device for the given sysfs device using the *all* registered
+ * driver operations.
+ *
+ * @param[in] sysfs_dev Pointer to the verbs_sysfs_dev structure representing the sysfs device.
+ * @return Pointer to the created verbs_device structure, or NULL on failure.
+ */
 static struct verbs_device *try_drivers(struct verbs_sysfs_dev *sysfs_dev)
 {
 	struct ibv_driver *driver;
@@ -464,6 +550,16 @@ static struct verbs_device *try_drivers(struct verbs_sysfs_dev *sysfs_dev)
 	return NULL;
 }
 
+/**
+ * @brief Check the ABI version of the InfiniBand devices.
+ *
+ * This function verifies that the ABI version of the InfiniBand devices
+ * is compatible with the library.
+ *
+ * @return 0 on success, or ENOSYS if the ABI version not found or not supported.
+ * @see IB_USER_VERBS_MIN_ABI_VERSION
+ * @see IB_USER_VERBS_MAX_ABI_VERSION
+ */
 static int check_abi_version(void)
 {
 	char value[8];
@@ -490,10 +586,17 @@ static int check_abi_version(void)
 	return 0;
 }
 
+/**
+ * @brief Check the memory lock limit early.
+ *
+ * This function checks the current memory lock limit and issues a warning
+ * if it is below a certain threshold.
+ */
 static void check_memlock_limit(void)
 {
 	struct rlimit rlim;
 
+	// Skip check if running as root
 	if (!geteuid())
 		return;
 
@@ -557,6 +660,9 @@ int ibverbs_get_device_list(struct list_head *device_list)
 	unsigned int num_devices = 0;
 	int ret;
 
+	/* First try to get the device list using netlink. If that fails,
+	 * fall back to scanning sysfs.
+	 */
 	ret = find_sysfs_devs_nl(&sysfs_list);
 	if (ret) {
 		ret = find_sysfs_devs(&sysfs_list);
@@ -599,6 +705,7 @@ int ibverbs_get_device_list(struct list_head *device_list)
 	if (list_empty(&sysfs_list) || drivers_loaded)
 		goto out;
 
+        // Dynamic load drivers
 	load_drivers();
 	drivers_loaded = 1;
 
@@ -620,6 +727,9 @@ out:
 	return num_devices;
 }
 
+/**
+ * Set the logging level from the environment variable.
+ */
 static void verbs_set_log_level(void)
 {
 	char *env;
@@ -643,6 +753,15 @@ static void verbs_log_file_fallback(void)
 #endif
 }
 
+/**
+ * @brief Set the log file from the environment variable.
+ *
+ * 1. If log level is set to none, do nothing.
+ * 2. If the environment variable is not set, fallback to default behavior.
+ * 3. If the log file cannot be opened, fallback to default behavior.
+ *
+ * @see verbs_log_file_fallback
+ */
 static void verbs_set_log_file(void)
 {
 	char *env;

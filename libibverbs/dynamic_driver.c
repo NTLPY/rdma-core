@@ -45,6 +45,9 @@
 
 #include "ibverbs.h"
 
+/**
+ * Structure representing an entry in the driver name list.
+ */
 struct ibv_driver_name {
 	struct list_node entry;
 	char *name;
@@ -52,6 +55,10 @@ struct ibv_driver_name {
 
 static LIST_HEAD(driver_name_list);
 
+/**
+ * Read a configuration file and update the driver name list.
+ * @param[in] path The path to the configuration file.
+ */
 static void read_config_file(const char *path)
 {
 	FILE *conf;
@@ -113,6 +120,10 @@ static void read_config_file(const char *path)
 	fclose(conf);
 }
 
+/**
+ * Read the configuration files from the config directory.
+ * @see IBV_CONFIG_DIR
+ */
 static void read_config(void)
 {
 	DIR *conf_dir;

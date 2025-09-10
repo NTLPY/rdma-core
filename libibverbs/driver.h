@@ -222,6 +222,9 @@ enum {
 	VERBS_MATCH_DRIVER_ID = 3,
 };
 
+/**
+ * Structure representing a match entry to choose a provider driver.
+ */
 struct verbs_match_ent {
 	void *driver_data;
 	union {
@@ -276,27 +279,45 @@ struct verbs_sysfs_dev {
 	struct list_node entry;
 	void *provider_data;
 	const struct verbs_match_ent *match;
+	//!< Which field is valid, can be VSYSFS_READ_NODE_GUID
 	unsigned int flags;
+	//!< Name of uverbs device
 	char sysfs_name[IBV_SYSFS_NAME_MAX];
+	//!< Device number of uverbs device
 	dev_t sysfs_cdev;
+	//!< Name of InfiniBand device
 	char ibdev_name[IBV_SYSFS_NAME_MAX];
+	//!<< Path to InfiniBand device in sysfs
 	char ibdev_path[IBV_SYSFS_PATH_MAX];
 	char modalias[512];
+	//!< Node GUID
 	uint64_t node_guid;
+	//!< Driver ID
 	uint32_t driver_id;
+	//!< Node type
 	enum ibv_node_type node_type;
+	//!< Index of InfiniBand device
 	int ibdev_idx;
+	//!< Number of ports
 	uint32_t num_ports;
+	//!< ABI version of uverbs device
 	uint32_t abi_ver;
+	//!< Modified time of InfiniBand device
 	struct timespec time_created;
 };
 
-/* Must change the PRIVATE IBVERBS_PRIVATE_ symbol if this is changed */
+/**
+ * Structure representing a provider driver, i.g. the operations that a verbs device can perform.
+ *
+ * @note Must change the PRIVATE IBVERBS_PRIVATE_ symbol if this is changed
+ */
 struct verbs_device_ops {
+	//!< Name of the device driver
 	const char *name;
 
 	uint32_t match_min_abi_version;
 	uint32_t match_max_abi_version;
+	//!< Match table to choose a provider driver
 	const struct verbs_match_ent *match_table;
 	const struct verbs_device_ops **static_providers;
 
@@ -308,6 +329,7 @@ struct verbs_device_ops {
 	struct verbs_context *(*import_context)(struct ibv_device *device,
 						int cmd_fd);
 
+	//!< Allocate a verbs_device structure for the given sysfs device.
 	struct verbs_device *(*alloc_device)(struct verbs_sysfs_dev *sysfs_dev);
 	void (*uninit_device)(struct verbs_device *device);
 };
@@ -752,13 +774,45 @@ int __ibv_query_gid_ex(struct ibv_context *context, uint32_t port_num,
 			    uint32_t flags, size_t entry_size,
 			    uint32_t fallback_attr_mask);
 
-/*
- * sysfs helper functions
+/**
+ * @brief Get the sysfs path.
+ *
+ * This function returns `/sys` or `SYSFS_PATH` if it is set and UID == EUID.
+ *
+ * @return A static string containing the sysfs path.
  */
 const char *ibv_get_sysfs_path(void);
 
+/**
+ * @brief Read a file from a sysfs directory.
+ *
+ * This function reads the contents of a file in a sysfs directory
+ * and stores it in a buffer. Append a null terminator to the buffer.
+ *
+ * @param[in] dir The base directory path.
+ * @param[in] file The name of the file to read, in relative path format.
+ * @param[out] buf The buffer to store the contents of the file.
+ * @param[in] size The size of the buffer.
+ *
+ * @return The number of bytes read on success (not including null terminator), or -1 on failure.
+ *
+ * @see ibv_read_sysfs_file_at
+ */
 int ibv_read_sysfs_file(const char *dir, const char *file,
 			char *buf, size_t size);
+/**
+ * @brief Read a file from a sysfs directory.
+ *
+ * This function reads the contents of a file in a sysfs directory
+ * and stores it in a buffer. Append a null terminator to the buffer.
+ *
+ * @param[in] dirfd A file descriptor referring to the working directory.
+ * @param[in] file The name of the file to read, in relative path format.
+ * @param[out] buf The buffer to store the contents of the file.
+ * @param[in] size The size of the buffer.
+ *
+ * @return The number of bytes read on success (not including null terminator), or -1 on failure.
+ */
 int ibv_read_sysfs_file_at(int dirfd, const char *file, char *buf, size_t size);
 int ibv_read_ibdev_sysfs_file(char *buf, size_t size,
 			      struct verbs_sysfs_dev *sysfs_dev,

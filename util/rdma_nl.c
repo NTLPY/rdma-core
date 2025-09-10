@@ -51,6 +51,16 @@ struct nla_policy rdmanl_policy[RDMA_NLDEV_ATTR_MAX] = {
 	[RDMA_NLDEV_SYS_ATTR_COPY_ON_FORK] = { .type = NLA_U8 },
 };
 
+/**
+ * @brief Error callback for RDMA netlink messages.
+ *
+ * This function is called when an error message is received.
+ *
+ * @param[in] nla Pointer to the sockaddr_nl structure.
+ * @param[in] nlerr Pointer to the nlmsgerr structure containing the error details.
+ * @param[out] arg Pointer to a boolean variable that will be set to true if an error occurs.
+ * @return Always returns 0.
+ */
 static int rdmanl_saw_err_cb(struct sockaddr_nl *nla, struct nlmsgerr *nlerr,
 			     void *arg)
 {

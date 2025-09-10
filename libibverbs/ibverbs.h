@@ -52,12 +52,41 @@ struct ibv_abi_compat_v2 {
 extern int abi_ver;
 extern const struct verbs_context_ops verbs_dummy_ops;
 
+/**
+ * @brief Get the list of ibverbs devices.
+ *
+ * This function updates the provided list with the available InfiniBand devices.
+ *
+ * @param[inout] list A pointer to a list_head structure that will be
+ * updated with the available InfiniBand devices verbs_sysfs_dev.
+ * @return The number of devices found, or a negative error code on failure.
+ */
 int ibverbs_get_device_list(struct list_head *list);
+/**
+ * Initialize the ibverbs library.
+ *
+ * This function is called automatically by ibv_get_device_list().
+ */
 int ibverbs_init(void);
 void ibverbs_device_put(struct ibv_device *dev);
 void ibverbs_device_hold(struct ibv_device *dev);
 int __lib_query_port(struct ibv_context *context, uint8_t port_num,
 		     struct ibv_port_attr *port_attr, size_t port_attr_len);
+/**
+ * Setup verbs_sysfs_dev from uverbs device path.
+ *
+ * @param[in] uv_dirfd File descriptor of the uverbs device directory.
+ * @param[in] uverbs Name of uverbs device.
+ * @param[out] sysfs_dev Pointer to the sysfs device structure to be filled.
+ *
+ * Following fields will be populated:
+ * 1. Name of uverbs device
+ * 2. Modified time of InfiniBand device
+ * 3. Device number
+ * 4. ABI version
+ *
+ * @return 0 on success, or error code on failure.
+ */
 int setup_sysfs_uverbs(int uv_dirfd, const char *uverbs,
 		       struct verbs_sysfs_dev *sysfs_dev);
 
@@ -66,6 +95,11 @@ static inline void load_drivers(void)
 {
 }
 #else
+/**
+ * @brief Load the drivers from the configuration directory and environment variables.
+ *
+ * Load drivers from the configuration directory and environment variables `RDMAV_DRIVERS` and `IBV_DRIVERS`.
+ */
 void load_drivers(void);
 #endif
 
@@ -87,10 +121,21 @@ static inline const struct verbs_context_ops *get_ops(struct ibv_context *ctx)
 	return &get_priv(ctx)->ops;
 }
 
+/**
+ * Decode kernel node type.
+ * @param[in] knode_type Kernel node type to decode.
+ * @return Decoded InfiniBand node type.
+ */
 enum ibv_node_type decode_knode_type(unsigned int knode_type);
 
 int find_sysfs_devs_nl(struct list_head *tmp_sysfs_dev_list);
 
+/**
+ * Try to access the char verbs device.
+ * @param[in] sysfs_dev Pointer to the verbs_sysfs_dev structure.
+ * @return 0 on success, or error code on failure.
+ * @see RDMA_CDEV_DIR
+ */
 int try_access_device(const struct verbs_sysfs_dev *sysfs_dev);
 
 #endif /* IB_VERBS_H */

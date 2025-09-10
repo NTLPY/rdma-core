@@ -42,7 +42,12 @@
 
 #include "ibverbs.h"
 
-/* Determine the name of the uverbsX class for the sysfs_dev using sysfs. */
+/**
+ * Parse verbs_sysfs_dev from sysfs_dev and append it to the provided list.
+ *
+ * @param[inout] sysfs_dev Pointer to the verbs_sysfs_dev structure to be filled.
+ * @return 0 on success, or an error code on failure.
+ */
 static int find_uverbs_sysfs(struct verbs_sysfs_dev *sysfs_dev)
 {
 	char path[IBV_SYSFS_PATH_MAX];
@@ -79,6 +84,20 @@ static int find_uverbs_sysfs(struct verbs_sysfs_dev *sysfs_dev)
 	return ret;
 }
 
+/**
+ * Callback function for finding verbs sysfs devices using netlink.
+ *
+ * Fetch device with follow information:
+ * 1. Name of uverbs device
+ * 2. Device number
+ * 3. Driver ID
+ * 4. ABI version
+ *
+ * @param msg Pointer to the netlink message.
+ * @param[out] data Pointer to the list_head structure to add found devices.
+ *
+ * @return NL_OK on success, or a NETLINK error code on failure.
+ */
 static int find_uverbs_nl_cb(struct nl_msg *msg, void *data)
 {
 	struct verbs_sysfs_dev *sysfs_dev = data;
@@ -136,6 +155,21 @@ static int find_uverbs_nl(struct nl_sock *nl, struct verbs_sysfs_dev *sysfs_dev)
 	return 0;
 }
 
+/**
+ * Callback function for finding InfiniBand sysfs devices using netlink.
+ *
+ * Fetch device with follow information:
+ * 1. Name of InfiniBand device
+ * 2. Node GUID
+ * 3. Node type
+ * 4. Index of InfiniBand device
+ * 5. Number of ports
+ *
+ * @param msg Pointer to the netlink message.
+ * @param[out] data Pointer to the list_head structure to add found devices.
+ *
+ * @return NL_OK on success, or a NETLINK error code on failure.
+ */
 static int find_sysfs_devs_nl_cb(struct nl_msg *msg, void *data)
 {
 	struct nlattr *tb[RDMA_NLDEV_ATTR_MAX];
@@ -187,7 +221,12 @@ err:
 	return NLE_PARSE_ERR;
 }
 
-/* Fetch the list of IB devices and uverbs from netlink */
+/**
+ * Find devices from netlink and add them to the provided list.
+ *
+ * @param[out] tmp_sysfs_dev_list Pointer to the list to which the sysfs device will be appended.
+ * @return 0 on success, or error code on failure.
+ */
 int find_sysfs_devs_nl(struct list_head *tmp_sysfs_dev_list)
 {
 	struct verbs_sysfs_dev *dev, *dev_tmp;
