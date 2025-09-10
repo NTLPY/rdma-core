@@ -1,0 +1,20 @@
+# EditorConfig
+#
+# This file configures indentation styles for source files in
+# supporting editors.
+#
+# See https://editorconfig.org/ for more.
+
+# Do not search for additional .editorconfig files above this
+# directory.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{c,h,in}]
+indent_size = 8
