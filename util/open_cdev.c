@@ -44,6 +44,15 @@
 
 #include <config.h>
 
+/**
+ * @brief Open a character device.
+ *
+ * This function is called to open a character device and obtain a file descriptor for it.
+ *
+ * @param[in] path The path to the character device.
+ * @param[in] cdev The device number of the character device to verify.
+ * @return A file descriptor for the opened character device, or -1 on failure.
+ */
 static int open_cdev_internal(const char *path, dev_t cdev)
 {
 	struct stat st;

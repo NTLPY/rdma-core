@@ -92,7 +92,9 @@ const struct verbs_match_ent mlx5_hca_table[] = {
 	{}
 };
 
+//!< Debug mask
 uint32_t mlx5_debug_mask = 0;
+//!< Freeze on error CQE flag
 int mlx5_freeze_on_error_cqe;
 
 static const struct verbs_context_ops mlx5_ctx_common_ops = {
@@ -661,6 +663,9 @@ void mlx5_set_debug_mask(void)
 		mlx5_debug_mask = strtol(env, NULL, 0);
 }
 
+/**
+ * Set freeze on error flag from `MLX5_FREEZE_ON_ERROR_CQE`.
+ */
 static void set_freeze_on_error(void)
 {
 	char *env;
@@ -681,6 +686,9 @@ static int get_always_bf(void)
 	return strcmp(env, "0") ? 1 : 0;
 }
 
+/**
+ * Set shut up blue flame flag from `MLX5_SHUT_UP_BF`.
+ */
 static int get_shut_up_bf(void)
 {
 	char *env;
@@ -728,6 +736,9 @@ static int need_uuar_lock(struct mlx5_context *ctx, int uuarn)
 	return 1;
 }
 
+/**
+ * Get single threaded application flag from `MLX5_SINGLE_THREADED`.
+ */
 static int single_threaded_app(void)
 {
 

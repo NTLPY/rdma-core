@@ -66,6 +66,14 @@ static inline bool __good_snprintf(size_t len, int rc)
 		(typeof(_mask))(((_reg) & (_mask)) >> __bf_shf(_mask));        \
 	})
 
+/**
+ * Align a value to the nearest multiple of a given alignment.
+ *
+ * @param[in] val The value to be aligned.
+ * @param[in] align The alignment boundary (must be a power of two).
+ *
+ * @return The smallest multiple of align greater than or equal to val.
+ */
 static inline unsigned long align(unsigned long val, unsigned long align)
 {
 	return (val + align - 1) & ~(align - 1);
@@ -95,6 +103,16 @@ uint32_t xorshift32(struct xorshift32_state *state);
 
 int set_fd_nonblock(int fd, bool nonblock);
 
+/**
+ * @brief Open a RDMA character device.
+ *
+ * This function is called to open a RDMA character device and obtain a file descriptor for it.
+ *
+ * @param[in] devname_hint The device name hint for the character device.
+ * @param[in] cdev The device number of the character device to verify.
+ * @return A file descriptor for the opened character device, or -1 on failure.
+ * @see RDMA_CDEV_DIR
+ */
 int open_cdev(const char *devname_hint, dev_t cdev);
 
 unsigned int get_random(void);

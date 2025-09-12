@@ -59,6 +59,7 @@
 #include "wqe.h"
 #include "mlx5_ifc.h"
 
+//!< Single threaded application flag
 int mlx5_single_threaded = 0;
 
 static inline int is_xrc_tgt(int type)
@@ -2398,6 +2399,9 @@ static int is_qpt_ooo_sup(struct mlx5_context *ctx,
 	}
 }
 
+/**
+ * @brief MLX5: Create a Queue Pair
+ */
 static struct ibv_qp *create_qp(struct ibv_context *context,
 				struct ibv_qp_init_attr_ex *attr,
 				struct mlx5dv_qp_init_attr *mlx5_qp_attr)
@@ -2594,6 +2598,7 @@ static struct ibv_qp *create_qp(struct ibv_context *context,
 	if (ctx->atomic_cap)
 		qp->atomics_enabled = 1;
 
+	// WR API
 	if (attr->comp_mask & IBV_QP_INIT_ATTR_SEND_OPS_FLAGS ||
 	    (mlx5_qp_attr &&
 	     mlx5_qp_attr->comp_mask & MLX5DV_QP_INIT_ATTR_MASK_SEND_OPS_FLAGS)) {

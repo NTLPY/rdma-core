@@ -236,7 +236,9 @@ struct mlx5_resource {
 
 struct mlx5_device {
 	struct verbs_device	verbs_dev;
+	//!< Page size of current system
 	int			page_size;
+	//!< Driver ABI version
 	int			driver_abi_ver;
 };
 
@@ -364,6 +366,7 @@ struct mlx5_context {
 	int				stall_cycles;
 	struct mlx5_bf		       *bfs;
 	FILE			       *dbg_fp;
+	//!< Name of current host
 	char				hostname[HOST_NAME_MAX + 1];
 	struct mlx5_spinlock            hugetlb_lock;
 	struct list_head                hugetlb_list;
@@ -676,7 +679,9 @@ struct mlx5_qp {
 	uint8_t				cur_setters_cnt;
 	uint8_t				num_mkey_setters;
 	uint8_t				fm_cache_rb;
+	//!< Error
 	int				err;
+	//!< Number of requests in current post send
 	int				nreq;
 	uint32_t			cur_size;
 	uint32_t			cur_post_rb;
@@ -973,6 +978,9 @@ extern int mlx5_single_threaded;
 
 #define to_mxxx(xxx, type) container_of(ib##xxx, struct mlx5_##type, ibv_##xxx)
 
+/**
+ * Dynamic cast from ibv_device to mlx5_device.
+ */
 static inline struct mlx5_device *to_mdev(struct ibv_device *ibdev)
 {
 	return container_of(ibdev, struct mlx5_device, verbs_dev.device);
@@ -1023,6 +1031,9 @@ static inline struct mlx5_td *to_mtd(struct ibv_td *ibtd)
 	return to_mxxx(td, td);
 }
 
+/**
+ * Dynamic cast from ibv_qp to mlx5_qp.
+ */
 static inline struct mlx5_qp *to_mqp(struct ibv_qp *ibqp)
 {
 	struct verbs_qp *vqp = (struct verbs_qp *)ibqp;
@@ -1087,9 +1098,28 @@ static inline struct mlx5_flow *to_mflow(struct ibv_flow *flow_id)
 
 bool is_mlx5_vfio_dev(struct ibv_device *device);
 
+/**
+ * Debugging functions
+ */
+///@{
+/**
+ * Open debug file.
+ *
+ * If `MLX5_DEBUG_FILE` is defined, the debug file will be opened,
+ * or debug information will be output to stderr if MLX5_DEBUG is defined.
+ *
+ * @param[out] dbg_fp Pointer to the debug file pointer.
+ */
 void mlx5_open_debug_file(FILE **dbg_fp);
+/**
+ * Close debug file.
+ */
 void mlx5_close_debug_file(FILE *dbg_fp);
+/**
+ * Set debug mask from `MLX5_DEBUG_MASK`.
+ */
 void mlx5_set_debug_mask(void);
+///@}
 
 int mlx5_alloc_buf(struct mlx5_buf *buf, size_t size, int page_size);
 void mlx5_free_buf(struct mlx5_buf *buf);
@@ -1126,6 +1156,9 @@ int mlx5_query_device_ex(struct ibv_context *context,
 			 size_t attr_size);
 int mlx5_query_rt_values(struct ibv_context *context,
 			 struct ibv_values_ex *values);
+/**
+ * @see create_qp
+ */
 struct ibv_qp *mlx5_create_qp_ex(struct ibv_context *context,
 				 struct ibv_qp_init_attr_ex *attr);
 int mlx5_query_port(struct ibv_context *context, uint8_t port,
@@ -1188,6 +1221,9 @@ int mlx5_post_srq_recv(struct ibv_srq *ibsrq,
 		       struct ibv_recv_wr *wr,
 		       struct ibv_recv_wr **bad_wr);
 
+/**
+ * @see create_qp
+ */
 struct ibv_qp *mlx5_create_qp(struct ibv_pd *pd, struct ibv_qp_init_attr *attr);
 int mlx5_query_qp(struct ibv_qp *qp, struct ibv_qp_attr *attr,
 		  int attr_mask,
@@ -1310,6 +1346,9 @@ struct ibv_pd *mlx5_import_pd(struct ibv_context *context,
 void mlx5_unimport_pd(struct ibv_pd *pd);
 void mlx5_qp_fill_wr_complete_error(struct mlx5_qp *mqp);
 void mlx5_qp_fill_wr_complete_real(struct mlx5_qp *mqp);
+/**
+ * Fill the work request function pointers for the given QP.
+ */
 int mlx5_qp_fill_wr_pfns(struct mlx5_qp *mqp,
 			 const struct ibv_qp_init_attr_ex *attr,
 			 const struct mlx5dv_qp_init_attr *mlx5_attr);
@@ -1636,6 +1675,9 @@ struct mlx5_dv_context_ops {
 };
 
 struct mlx5_dv_context_ops *mlx5_get_dv_ops(struct ibv_context *context);
+/**
+ * Set the device-specific context operations.
+ */
 void mlx5_set_dv_ctx_ops(struct mlx5_dv_context_ops *ops);
 
 int mlx5_cmd_status_to_err(uint8_t status);

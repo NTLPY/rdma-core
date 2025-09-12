@@ -140,6 +140,7 @@ struct verbs_srq {
 
 enum verbs_qp_mask {
 	VERBS_QP_XRCD		= 1 << 0,
+	//!< Support WR API
 	VERBS_QP_EX		= 1 << 1,
 };
 
@@ -323,6 +324,17 @@ struct verbs_device_ops {
 
 	bool (*match_device)(struct verbs_sysfs_dev *sysfs_dev);
 
+	/**
+	 * Allocate a verbs_context structure for the given device.
+	 *
+	 * @param[inout] device The device for which the context is allocated.
+	 * @param[in] cmd_fd The file descriptor for the character device.
+	 * @param[in] private_data Optional private data for provider driver.
+	 * @return Pointer to the allocated verbs_context structure, or NULL on failure.
+	 *
+	 * @note The ownership of cmd_fd is transferred to the provider driver,
+	 * should be closed by the driver if failed.
+	 */
 	struct verbs_context *(*alloc_context)(struct ibv_device *device,
 					       int cmd_fd,
 					       void *private_data);
@@ -338,8 +350,14 @@ struct verbs_device_ops {
 struct verbs_device {
 	struct ibv_device device; /* Must be first */
 	const struct verbs_device_ops *ops;
+	//!< Reference count for the device (currently hold by entry of opened device list and opened context)
+	//!<
+	//!< @see ibverbs_device_hold
+	//!< @see ibv_get_device_list
+	//!< @see verbs_init_context
 	atomic_int refcount;
 	struct list_node entry;
+	//!< Sysfs RDMA device
 	struct verbs_sysfs_dev *sysfs;
 	uint64_t core_support;
 };
@@ -355,6 +373,12 @@ struct verbs_counters {
  * this structure then verbs_dummy_ops must also be updated.
  *
  * Keep sorted.
+ */
+/**
+ * @brief Verbs context operations structure.
+ *
+ * This is the union of every op the *every* driver must support. So anyone can
+ * call them without
  */
 struct verbs_context_ops {
 	int (*advise_mr)(struct ibv_pd *pd,
@@ -500,6 +524,9 @@ struct verbs_context_ops {
 	void (*unimport_pd)(struct ibv_pd *pd);
 };
 
+/**
+ * Dynamic cast ibv_device to verbs_device.
+ */
 static inline struct verbs_device *
 verbs_get_device(const struct ibv_device *dev)
 {
@@ -534,17 +561,54 @@ void verbs_register_driver(const struct verbs_device_ops *ops);
 		verbs_register_driver(&drv_struct);                            \
 	}
 
+/**
+ * @brief Allocate and initialize a context for the given device.
+ *
+ * This function is called to initialize and allocate a context for the given device (driver wrapper).
+ *
+ * @param[in] device The device to initialize the context for.
+ * @param[in] cmd_fd The file descriptor for the character device.
+ * @param[in] alloc_size The size of the context to allocate.
+ * @param[in] context_offset The offset of the verbs_context member within the device structure.
+ * @param[in] driver_id The driver ID for the device, @see rdma_driver_id
+ * @return A pointer to the initialized context, or NULL on failure.
+ */
 void *_verbs_init_and_alloc_context(struct ibv_device *device, int cmd_fd,
 				    size_t alloc_size,
 				    struct verbs_context *context_offset,
 				    uint32_t driver_id);
 
+/**
+ * @brief Allocate and initialize a context for the given device, a wrapper of _verbs_init_and_alloc_context.
+ *
+ * @param[in] ibdev The device to initialize the context for.
+ * @param[in] cmd_fd The file descriptor for the character device.
+ * @param[in] drv_ctx_ptr The driver context pointer.
+ * @param[in] ctx_memb The verbs_context member name within the device structure.
+ * @param[in] driver_id The driver ID for the device, @see rdma_driver_id
+ * @return A pointer to the initialized context, or NULL on failure.
+ *
+ * @note Ownership of cmd_fd is transferred into this function.
+ *
+ * @see _verbs_init_and_alloc_context
+ * @see verbs_init_context
+ */
 #define verbs_init_and_alloc_context(ibdev, cmd_fd, drv_ctx_ptr, ctx_memb,     \
 				     driver_id)				       \
 	((typeof(drv_ctx_ptr))_verbs_init_and_alloc_context(                   \
 		ibdev, cmd_fd, sizeof(*drv_ctx_ptr),                           \
 		&((typeof(drv_ctx_ptr))NULL)->ctx_memb, (driver_id)))
 
+/**
+ * @brief Initialize a verbs_context for the given device.
+ *
+ * @param[out] context_ex The verbs_context to initialize.
+ * @param[in] device The device to initialize the context for.
+ * @param[in] cmd_fd The file descriptor for the character device.
+ * @param[in] driver_id The driver ID for the device, @see rdma_driver_id
+ *
+ * @note Ownership of cmd_fd is transferred into this function.
+ */
 int verbs_init_context(struct verbs_context *context_ex,
 		       struct ibv_device *device, int cmd_fd,
 		       uint32_t driver_id);
@@ -556,6 +620,15 @@ void verbs_init_cq(struct ibv_cq *cq, struct ibv_context *context,
 		       struct ibv_comp_channel *channel,
 		       void *cq_context);
 
+/**
+ * @brief Open a device for use.
+ *
+ * This function is called to open a device and obtain a context for it.
+ *
+ * @param[in] device The device to open.
+ * @param[in] private_data Private data for provider driver.
+ * @return A pointer to the opened context, or NULL on failure.
+ */
 struct ibv_context *verbs_open_device(struct ibv_device *device,
 				      void *private_data);
 int ibv_cmd_get_context(struct verbs_context *context,
@@ -819,6 +892,9 @@ int ibv_read_ibdev_sysfs_file(char *buf, size_t size,
 			      const char *fnfmt, ...)
 	__attribute__((format(printf, 4, 5)));
 
+/**
+ * Check if the input value is a subset of the supported value.
+ */
 static inline bool check_comp_mask(uint64_t input, uint64_t supported)
 {
 	return (input & ~supported) == 0;

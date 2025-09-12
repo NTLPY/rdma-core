@@ -47,6 +47,9 @@
 
 #define MLX5_ATOMIC_SIZE 8
 
+/**
+ * Mapping of IB verbs WR to MLX5 opcodes
+ */
 static const uint32_t mlx5_ib_opcode[] = {
 	[IBV_WR_SEND]			= MLX5_OPCODE_SEND,
 	[IBV_WR_SEND_WITH_INV]		= MLX5_OPCODE_SEND_INVAL,
@@ -1180,6 +1183,10 @@ enum {
 	WQE_REQ_SETTERS_UD_XRC_DC = 2,
 };
 
+/**
+ * MLX5: Start WR post send.
+ * @param[inout] ibqp A pointer to the IB QP EX.
+ */
 static void mlx5_send_wr_start(struct ibv_qp_ex *ibqp)
 {
 	struct mlx5_qp *mqp = to_mqp((struct ibv_qp *)ibqp);
@@ -1236,6 +1243,11 @@ static void mlx5_send_wr_abort(struct ibv_qp_ex *ibqp)
 	mlx5_spin_unlock(&mqp->sq.lock);
 }
 
+/**
+ * MLX5: Add a new WQE with mlx5 OpCode.
+ * @param[inout] ibqp A pointer to the IB QP EX.
+ * @param[in] mlx5_op The mlx5 opcode.
+ */
 static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp,
 				       int ib_op,
 				       uint8_t mlx5_op)
@@ -1293,6 +1305,11 @@ static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp, int ib_op,
 	mqp->cur_ctrl = ctrl;
 }
 
+/**
+ * MLX5: Add a new WQE with verbs OpCode.
+ * @param[inout] ibqp A pointer to the IB QP EX.
+ * @param[in] ib_op The verbs opcode.
+ */
 static inline void _common_wqe_init(struct ibv_qp_ex *ibqp,
 				    enum ibv_wr_opcode ib_op)
 				    ALWAYS_INLINE;
@@ -1462,6 +1479,9 @@ static void mlx5_send_wr_send_tso(struct ibv_qp_ex *ibqp, void *hdr,
 	mqp->nreq++;
 }
 
+/**
+ * MLX5: Add a RDMA WR.
+ */
 static inline void _mlx5_send_wr_rdma(struct ibv_qp_ex *ibqp,
 				      uint32_t rkey,
 				      uint64_t remote_addr,
@@ -1500,12 +1520,20 @@ static inline void _mlx5_send_wr_rdma(struct ibv_qp_ex *ibqp,
 	mqp->cur_setters_cnt = 0;
 }
 
+/**
+ * MLX5: Add a RDMA Write WR.
+ * @see _mlx5_send_wr_rdma
+ */
 static void mlx5_send_wr_rdma_write(struct ibv_qp_ex *ibqp, uint32_t rkey,
 				    uint64_t remote_addr)
 {
 	_mlx5_send_wr_rdma(ibqp, rkey, remote_addr, IBV_WR_RDMA_WRITE);
 }
 
+/**
+ * MLX5: Add a RDMA Write with Immediate WR.
+ * @see _mlx5_send_wr_rdma
+ */
 static void mlx5_send_wr_rdma_write_imm(struct ibv_qp_ex *ibqp, uint32_t rkey,
 					uint64_t remote_addr, __be32 imm_data)
 {
@@ -1516,6 +1544,10 @@ static void mlx5_send_wr_rdma_write_imm(struct ibv_qp_ex *ibqp, uint32_t rkey,
 	mqp->cur_ctrl->imm = imm_data;
 }
 
+/**
+ * MLX5: Add a RDMA Read WR.
+ * @see _mlx5_send_wr_rdma
+ */
 static void mlx5_send_wr_rdma_read(struct ibv_qp_ex *ibqp, uint32_t rkey,
 				   uint64_t remote_addr)
 {
@@ -3448,6 +3480,7 @@ static inline void mlx5_wr_memcpy(struct mlx5dv_qp_ex *mqp_ex,
 }
 
 enum {
+	//!< Supported send operations flags for RC QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_RC =
 		IBV_QP_EX_WITH_SEND |
 		IBV_QP_EX_WITH_SEND_WITH_INV |
@@ -3459,13 +3492,17 @@ enum {
 		IBV_QP_EX_WITH_ATOMIC_FETCH_AND_ADD |
 		IBV_QP_EX_WITH_LOCAL_INV |
 		IBV_QP_EX_WITH_BIND_MW,
+	//!< Supported send operations flags for XRC QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_XRC =
 		MLX5_SUPPORTED_SEND_OPS_FLAGS_RC,
+	//!< Supported send operations flags for DCI QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_DCI =
 		MLX5_SUPPORTED_SEND_OPS_FLAGS_RC,
+	//!< Supported send operations flags for UD QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_UD =
 		IBV_QP_EX_WITH_SEND |
 		IBV_QP_EX_WITH_SEND_WITH_IMM,
+	//!< Supported send operations flags for UC QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_UC =
 		IBV_QP_EX_WITH_SEND |
 		IBV_QP_EX_WITH_SEND_WITH_INV |
@@ -3474,6 +3511,7 @@ enum {
 		IBV_QP_EX_WITH_RDMA_WRITE_WITH_IMM |
 		IBV_QP_EX_WITH_LOCAL_INV |
 		IBV_QP_EX_WITH_BIND_MW,
+	//!< Supported send operations flags for RAW_PACKET QPs
 	MLX5_SUPPORTED_SEND_OPS_FLAGS_RAW_PACKET =
 		IBV_QP_EX_WITH_SEND |
 		IBV_QP_EX_WITH_TSO,

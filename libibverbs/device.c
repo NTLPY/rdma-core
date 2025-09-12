@@ -222,11 +222,6 @@ static bool has_ioctl_write(struct ibv_context *ctx)
 	return true;
 }
 
-/*
- * Ownership of cmd_fd is transferred into this function, and it will either
- * be released during the matching call to verbs_uninit_contxt or during the
- * failure path of this function.
- */
 int verbs_init_context(struct verbs_context *context_ex,
 		       struct ibv_device *device, int cmd_fd,
 		       uint32_t driver_id)
@@ -257,11 +252,6 @@ int verbs_init_context(struct verbs_context *context_ex,
 	return 0;
 }
 
-/*
- * Allocate and initialize a context structure. This is called to create the
- * driver wrapper, and context_offset is the number of bytes into the wrapper
- * structure where the verbs_context starts.
- */
 void *_verbs_init_and_alloc_context(struct ibv_device *device, int cmd_fd,
 				    size_t alloc_size,
 				    struct verbs_context *context_offset,

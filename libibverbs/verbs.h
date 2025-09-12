@@ -2065,9 +2065,12 @@ struct ibv_context_ops {
 };
 
 struct ibv_context {
+	//!< Pointer to the device associated with this context
 	struct ibv_device      *device;
 	struct ibv_context_ops	ops;
+	//!< File descriptor for the character device
 	int			cmd_fd;
+	//!< File descriptor for the async event
 	int			async_fd;
 	int			num_comp_vectors;
 	pthread_mutex_t		mutex;
@@ -2249,6 +2252,7 @@ struct verbs_context {
 	void (*ABI_placeholder1) (void); /* DO NOT COPY THIS GARBAGE */
 	struct ibv_qp *(*open_qp)(struct ibv_context *context,
 			struct ibv_qp_open_attr *attr);
+	//!< Calling ibv_create_qp_ex
 	struct ibv_qp *(*create_qp_ex)(struct ibv_context *context,
 			struct ibv_qp_init_attr_ex *qp_init_attr_ex);
 	int (*get_srq_num)(struct ibv_srq *srq, uint32_t *srq_num);
@@ -2262,6 +2266,11 @@ struct verbs_context {
 	struct ibv_context context;	/* Must be last field in the struct */
 };
 
+/**
+ * Dynamic cast from ibv_context to verbs_context.
+ *
+ * @note It checks the ABI compatibility.
+ */
 static inline struct verbs_context *verbs_get_ctx(struct ibv_context *ctx)
 {
 	if (ctx->abi_compat != __VERBS_ABI_IS_EXTENDED)
@@ -2273,6 +2282,13 @@ static inline struct verbs_context *verbs_get_ctx(struct ibv_context *ctx)
 						 context));
 }
 
+/**
+ * Get operation from ibv_context.
+ *
+ * @param[in] ctx Device context.
+ * @param[in] op  Operation name in struct verbs_context.
+ * @return Operation pointer or NULL if not supported.
+ */
 #define verbs_get_ctx_op(ctx, op) ({ \
 	struct verbs_context *__vctx = verbs_get_ctx(ctx); \
 	(!__vctx || (__vctx->sz < sizeof(*__vctx) - offsetof(struct verbs_context, op)) || \
@@ -3115,6 +3131,9 @@ static inline int ibv_post_srq_ops(struct ibv_srq *srq,
 struct ibv_qp *ibv_create_qp(struct ibv_pd *pd,
 			     struct ibv_qp_init_attr *qp_init_attr);
 
+/**
+ * ibv_create_qp_ex - Create a queue pair with extended attributes.
+ */
 static inline struct ibv_qp *
 ibv_create_qp_ex(struct ibv_context *context, struct ibv_qp_init_attr_ex *qp_init_attr_ex)
 {

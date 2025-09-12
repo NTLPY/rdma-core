@@ -58,7 +58,7 @@ extern const struct verbs_context_ops verbs_dummy_ops;
  * This function updates the provided list with the available InfiniBand devices.
  *
  * @param[inout] list A pointer to a list_head structure that will be
- * updated with the available InfiniBand devices verbs_sysfs_dev.
+ * updated with the available InfiniBand devices verbs_device.
  * @return The number of devices found, or a negative error code on failure.
  */
 int ibverbs_get_device_list(struct list_head *list);
@@ -68,7 +68,13 @@ int ibverbs_get_device_list(struct list_head *list);
  * This function is called automatically by ibv_get_device_list().
  */
 int ibverbs_init(void);
+/**
+ * Decrement the reference count of the underlying verbs_device and release it when it reaches zero.
+ */
 void ibverbs_device_put(struct ibv_device *dev);
+/**
+ * Increment the reference count of the underlying verbs_device.
+ */
 void ibverbs_device_hold(struct ibv_device *dev);
 int __lib_query_port(struct ibv_context *context, uint8_t port_num,
 		     struct ibv_port_attr *port_attr, size_t port_attr_len);
@@ -111,11 +117,17 @@ struct verbs_ex_private {
 	bool imported;
 };
 
+/**
+ * Dynamic cast ibv_context to verbs_ex_private.
+ */
 static inline struct verbs_ex_private *get_priv(struct ibv_context *ctx)
 {
 	return container_of(ctx, struct verbs_context, context)->priv;
 }
 
+/**
+ * Get the verbs context operations for a given context.
+ */
 static inline const struct verbs_context_ops *get_ops(struct ibv_context *ctx)
 {
 	return &get_priv(ctx)->ops;
