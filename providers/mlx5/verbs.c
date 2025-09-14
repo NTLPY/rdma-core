@@ -1510,6 +1510,15 @@ int mlx5_destroy_srq(struct ibv_srq *srq)
 	return 0;
 }
 
+/**
+ * Caculate Send Queue WQE overhead in bytes.
+ *
+ * @param[in] qp Pointer to the QP.
+ * @param[in] qp_type QP type.
+ * @param[in] ops Bitwise OR of ibv_qp_create_send_ops_flags.
+ * @param[in] mlx5_ops Bitwise OR of mlx5dv_qp_create_send_ops_flags.
+ * @return WQE overhead in bytes or -EINVAL on error.
+ */
 static int _sq_overhead(struct mlx5_qp *qp,
 			enum ibv_qp_type qp_type,
 			uint64_t ops,
@@ -1580,6 +1589,14 @@ static int _sq_overhead(struct mlx5_qp *qp,
 	return size;
 }
 
+/**
+ * Caculate Send Queue WQE overhead in bytes.
+ *
+ * @param[in] qp Pointer to the QP.
+ * @param[in] attr QP initial attributes.
+ * @param[in] mlx5_qp_attr Pointer to the mlx5dv_qp_init_attr structure or NULL.
+ * @return WQE overhead in bytes or -EINVAL on error.
+ */
 static int sq_overhead(struct mlx5_qp *qp, struct ibv_qp_init_attr_ex *attr,
 		       struct mlx5dv_qp_init_attr *mlx5_qp_attr)
 {
@@ -2454,14 +2471,14 @@ static struct ibv_qp *create_qp(struct ibv_context *context,
 			goto err;
 		}
 
-		qp->flags |= MLX5_QP_FLAGS_USE_UNDERLAY;
+		qp->flags |= MLX5_QP_FLAGS_USE_UNDERLAY; //!< \todo ?
 	}
 
 	memset(&cmd, 0, sizeof(cmd));
 	memset(&resp, 0, sizeof(resp));
 	memset(&resp_ex, 0, sizeof(resp_ex));
 
-	if (use_scatter_to_cqe())
+	if (use_scatter_to_cqe()) //!< ?
 		mlx5_create_flags |= MLX5_QP_FLAG_SCATTER_CQE;
 
 	if (mlx5_qp_attr) {

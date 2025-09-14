@@ -187,6 +187,16 @@ void mlx5_init_qp_indices(struct mlx5_qp *qp)
 	qp->sq.cur_post  = 0;
 }
 
+/**
+ * MLX5: Check if WQ has enough space for nreq new requests
+ *
+ * @param[in] wq Work Queue to check
+ * @param[in] nreq Number of new requests to check for
+ * @param[in] cq Completion Queue associated with the WQ
+ *
+ * @return 0 if there is enough space, 1 if not
+ * @todo Why invoke CQ?
+ */
 static int mlx5_wq_overflow(struct mlx5_wq *wq, int nreq, struct mlx5_cq *cq)
 {
 	unsigned cur;
@@ -814,7 +824,7 @@ static inline int _mlx5_post_send(struct ibv_qp *ibqp, struct ibv_send_wr *wr,
 	struct mlx5_wqe_data_seg *dpseg;
 	struct mlx5_sg_copy_ptr sg_copy_ptr = {.index = 0, .offset = 0};
 	int nreq;
-	int inl = 0;
+	int inl = 0; // Has any inline data (IBV_SEND_INLINE && num_sge > 0)
 	int err = 0;
 	int size = 0;
 	int i;

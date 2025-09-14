@@ -365,6 +365,7 @@ struct mlx5_context {
 	int				stall_adaptive_enable;
 	int				stall_cycles;
 	struct mlx5_bf		       *bfs;
+	//!< Debug file pointer
 	FILE			       *dbg_fp;
 	//!< Name of current host
 	char				hostname[HOST_NAME_MAX + 1];
@@ -374,6 +375,7 @@ struct mlx5_context {
 	uint8_t				cached_link_layer[MLX5_MAX_PORTS_NUM];
 	uint8_t				cached_port_flags[MLX5_MAX_PORTS_NUM];
 	unsigned int			cached_device_cap_flags;
+	//!< Atomic capabilities
 	enum ibv_atomic_cap		atomic_cap;
 	struct {
 		uint64_t                offset;
@@ -590,12 +592,20 @@ struct wr_list {
 	uint16_t	next;
 };
 
+/**
+ * MLX5: Work Queue
+ *
+ * Queue View:
+ * 0 <-----> tail <-----> head (posted here)
+ */
 struct mlx5_wq {
 	uint64_t		       *wrid;
 	unsigned		       *wqe_head;
 	struct mlx5_spinlock		lock;
 	unsigned			wqe_cnt;
+	//!< Max number of WQEs
 	unsigned			max_post;
+	//!< Index of the last posted WQE
 	unsigned			head;
 	unsigned			tail;
 	unsigned			cur_post;
@@ -665,6 +675,7 @@ struct mlx5_qp {
 	struct mlx5_resource            rsc; /* This struct must be first */
 	struct verbs_qp			verbs_qp;
 	struct mlx5dv_qp_ex		dv_qp;
+	//!< Pointer to the ibv_qp
 	struct ibv_qp		       *ibv_qp;
 	struct mlx5_buf                 buf;
 	int                             max_inline_data;
@@ -679,7 +690,7 @@ struct mlx5_qp {
 	uint8_t				cur_setters_cnt;
 	uint8_t				num_mkey_setters;
 	uint8_t				fm_cache_rb;
-	//!< Error
+	//!< Last encountered error
 	int				err;
 	//!< Number of requests in current post send
 	int				nreq;
@@ -701,6 +712,7 @@ struct mlx5_qp {
 	struct mlx5_wq                  rq;
 	int                             wq_sig;
 	uint32_t			qp_cap_cache;
+	//!< Atomic operations is enabled
 	int				atomics_enabled;
 	uint32_t			max_tso;
 	uint16_t			max_tso_header;
@@ -986,6 +998,9 @@ static inline struct mlx5_device *to_mdev(struct ibv_device *ibdev)
 	return container_of(ibdev, struct mlx5_device, verbs_dev.device);
 }
 
+/**
+ * Dynamic cast from ibv_context to mlx5_context.
+ */
 static inline struct mlx5_context *to_mctx(struct ibv_context *ibctx)
 {
 	return container_of(ibctx, struct mlx5_context, ibv_ctx.context);
@@ -1002,6 +1017,11 @@ static inline struct mlx5_pd *to_mpd(struct ibv_pd *ibpd)
 	return mpd;
 }
 
+/**
+ * Dynamic cast from ibv_pd to mlx5_parent_domain.
+ * @return NULL if ibpd is NULL or ibpd is not a parent_domain.
+ * @todo Check.
+ */
 static inline struct mlx5_parent_domain *to_mparent_domain(struct ibv_pd *ibpd)
 {
 	struct mlx5_parent_domain *mparent_domain =
@@ -1014,6 +1034,9 @@ static inline struct mlx5_parent_domain *to_mparent_domain(struct ibv_pd *ibpd)
 	return NULL;
 }
 
+/**
+ * Dynamic cast from ibv_cq to mlx5_cq.
+ */
 static inline struct mlx5_cq *to_mcq(struct ibv_cq *ibcq)
 {
 	return container_of(ibcq, struct mlx5_cq, verbs_cq.cq);
@@ -1371,6 +1394,9 @@ static inline void *mlx5_find_uidx(struct mlx5_context *ctx, uint32_t uidx)
 	return NULL;
 }
 
+/**
+ * Lock the spinlock.
+ */
 static inline int mlx5_spin_lock(struct mlx5_spinlock *lock)
 {
 	if (lock->need_lock)
@@ -1403,6 +1429,9 @@ static inline int mlx5_spin_unlock(struct mlx5_spinlock *lock)
 	return 0;
 }
 
+/**
+ * Initialize the spinlock.
+ */
 static inline int mlx5_spinlock_init(struct mlx5_spinlock *lock, int need_lock)
 {
 	lock->in_use = 0;
@@ -1410,6 +1439,13 @@ static inline int mlx5_spinlock_init(struct mlx5_spinlock *lock, int need_lock)
 	return pthread_spin_init(&lock->lock, PTHREAD_PROCESS_PRIVATE);
 }
 
+/**
+ * MLX5: Initialize the spinlock according to the PD's parent domain.
+ *
+ * No need lock if:
+ * 1. PD is a parent domain and attached to a thread domain.
+ * 2. Application is single threaded (MLX5_SINGLE_THREADED=1).
+ */
 static inline int mlx5_spinlock_init_pd(struct mlx5_spinlock *lock, struct ibv_pd *pd)
 {
 	struct mlx5_parent_domain *mparent_domain;

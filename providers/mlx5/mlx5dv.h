@@ -1280,12 +1280,22 @@ struct mlx5_wqe_srq_next_seg {
 	uint8_t			rsvd1[11];
 };
 
+/**
+ * MLX5: WQE Data Segment
+ *
+ * Packed / Padded size: 16 bytes
+ */
 struct mlx5_wqe_data_seg {
 	__be32			byte_count;
 	__be32			lkey;
 	__be64			addr;
 };
 
+/**
+ * MLX5: WQE Control Segment
+ *
+ * Packed / Padded size: 16 bytes
+ */
 struct mlx5_wqe_ctrl_seg {
 	__be32		opmod_idx_opcode;
 	__be32		qpn_ds;
@@ -1300,6 +1310,11 @@ struct mlx5_mprq_wqe {
 	struct mlx5_wqe_data_seg	dseg;
 };
 
+/**
+ * MLX5: WQE Address Vector
+ *
+ * Packed / Padded size: 64 bytes
+ */
 struct mlx5_wqe_av {
 	union {
 		struct {
@@ -1320,6 +1335,11 @@ struct mlx5_wqe_av {
 	uint8_t		rgid[16];
 };
 
+/**
+ * MLX5: WQE Datagram Segment
+ *
+ * Packed / Padded size: 64 bytes
+ */
 struct mlx5_wqe_datagram_seg {
 	struct mlx5_wqe_av	av;
 };
@@ -1339,6 +1359,11 @@ struct mlx5_wqe_inl_data_seg {
 	uint32_t	byte_count;
 };
 
+/**
+ * MLX5: WQE Ethernet Segment
+ *
+ * Packed / Padded size: 32 bytes
+ */
 struct mlx5_wqe_eth_seg {
 	__be32		rsvd0;
 	uint8_t		cs_flags;

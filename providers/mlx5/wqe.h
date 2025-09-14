@@ -56,11 +56,21 @@ struct mlx5_wqe_eth_pad {
 	uint8_t rsvd0[16];
 };
 
+/**
+ * MLX5: WQE XRC Segment
+ *
+ * Packed / Padded size: 16 bytes
+ */
 struct mlx5_wqe_xrc_seg {
 	__be32		xrc_srqn;
 	uint8_t		rsvd[12];
 };
 
+/**
+ * MLX5: WQE Masked Atomic Segment
+ *
+ * Packed / Padded size: 32 bytes
+ */
 struct mlx5_wqe_masked_atomic_seg {
 	uint64_t	swap_add;
 	uint64_t	compare;
