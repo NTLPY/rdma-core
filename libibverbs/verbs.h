@@ -938,6 +938,7 @@ struct ibv_qp_cap {
 	uint32_t		max_recv_wr;
 	uint32_t		max_send_sge;
 	uint32_t		max_recv_sge;
+	//!< Max size of inline data
 	uint32_t		max_inline_data;
 };
 

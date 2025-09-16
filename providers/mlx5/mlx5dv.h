@@ -1344,17 +1344,32 @@ struct mlx5_wqe_datagram_seg {
 	struct mlx5_wqe_av	av;
 };
 
+/**
+ * MLX5: WQE Remote Address Segment
+ *
+ * Packed / Padded size: 16 bytes
+ */
 struct mlx5_wqe_raddr_seg {
 	__be64		raddr;
 	__be32		rkey;
 	__be32		reserved;
 };
 
+/**
+ * MLX5: WQE Atomic Segment
+ *
+ * Packed / Padded size: 16 bytes
+ */
 struct mlx5_wqe_atomic_seg {
 	__be64		swap_add;
 	__be64		compare;
 };
 
+/**
+ * MLX5: WQE Inline Data Segment
+ *
+ * Packed / Padded size: 4 bytes
+ */
 struct mlx5_wqe_inl_data_seg {
 	uint32_t	byte_count;
 };
