@@ -675,6 +675,13 @@ static void set_freeze_on_error(void)
 		mlx5_freeze_on_error_cqe = strtol(env, NULL, 0);
 }
 
+/**
+ * @brief Set always prefer blue flame flag from `MLX5_POST_SEND_PREFER_BF`.
+ *
+ * Always prefer blue flame even no WQE has inline data.
+ *
+ * @see post_send_db
+ */
 static int get_always_bf(void)
 {
 	char *env;

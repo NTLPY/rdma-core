@@ -1253,14 +1253,18 @@ enum {
 };
 
 enum {
+	//!< Signal when a WQE completes, see IBV_SEND_SIGNALED
 	MLX5_WQE_CTRL_CQ_UPDATE	= 2 << 2,
+	//!< Generate a solicited event, see IBV_SEND_SOLICITED
 	MLX5_WQE_CTRL_SOLICITED	= 1 << 1,
+	//!< Fence previous WQEs, see IBV_SEND_FENCE
 	MLX5_WQE_CTRL_FENCE	= 4 << 5,
 	MLX5_WQE_CTRL_INITIATOR_SMALL_FENCE = 1 << 5,
 };
 
 enum {
 	MLX5_SEND_WQE_BB	= 64,
+	//!< Smallest unit for one WQE, 64 bytes
 	MLX5_SEND_WQE_SHIFT	= 6,
 };
 
@@ -1297,11 +1301,16 @@ struct mlx5_wqe_data_seg {
  * Packed / Padded size: 16 bytes
  */
 struct mlx5_wqe_ctrl_seg {
+	//!< 0-7 lsbs for opcode, 8-23 for cur_post
 	__be32		opmod_idx_opcode;
+	//!< 0-7 lsbs for cur_size, 8-31 for QP number
 	__be32		qpn_ds;
+	//!< Signature of WQE, optional
 	uint8_t		signature;
 	__be16		dci_stream_channel_id;
+	//!< Flags, see MLX5_WQE_CTRL_CQ_UPDATE, MLX5_WQE_CTRL_SOLICITED, MLX5_WQE_CTRL_FENCE, MLX5_WQE_CTRL_INITIATOR_SMALL_FENCE
 	uint8_t		fm_ce_se;
+	//!< Immediate data
 	__be32		imm;
 } __attribute__((__packed__)) __attribute__((__aligned__(4)));
 

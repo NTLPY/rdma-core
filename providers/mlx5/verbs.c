@@ -186,6 +186,13 @@ end:
 	free(bf);
 }
 
+/**
+ * MLX5: Allocate a dynamic UAR from kernel.
+ *
+ * @param[in] context The device context.
+ * @param[in] flags Allocation flags (mlx5_ib_uapi_uar_alloc_type)
+ * @return On success, a pointer to the allocated UAR structure. On failure, NULL and errno is set.
+ */
 static struct mlx5_bf *
 mlx5_alloc_dyn_uar(struct ibv_context *context, uint32_t flags)
 {
@@ -337,6 +344,9 @@ static void mlx5_insert_dyn_uuars(struct mlx5_context *ctx,
 	}
 }
 
+/**
+ * Return unused UARs to the pool.
+ */
 static void mlx5_put_qp_uar(struct mlx5_context *ctx, struct mlx5_bf *bf)
 {
 	if (!bf || (!bf->qp_dedicated && !bf->qp_shared))

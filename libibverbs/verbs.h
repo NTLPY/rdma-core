@@ -1332,8 +1332,9 @@ struct ibv_qp_ex {
 	struct ibv_qp qp_base;
 	uint64_t comp_mask;
 
+	//!< WR ID for next WR
 	uint64_t wr_id;
-	/* bitmask from enum ibv_send_flags */
+	//!< Flags for next WR, bitmask from enum ibv_send_flags
 	unsigned int wr_flags;
 
 	void (*wr_atomic_cmp_swp)(struct ibv_qp_ex *qp, uint32_t rkey,

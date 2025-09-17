@@ -324,6 +324,7 @@ struct mlx5_context {
 	int				num_uars_per_page;
 	int				bf_regs_per_page;
 	int				num_bf_regs;
+	//!< Use BF even if no WQE has inline data
 	int				prefer_bf;
 	int				shut_up_bf;
 	struct {
@@ -405,6 +406,7 @@ struct mlx5_context {
 	pthread_mutex_t			dyn_bfregs_mutex; /* protects the dynamic bfregs allocation */
 	uint32_t			num_dyn_bfregs;
 	uint32_t			max_num_legacy_dyn_uar_sys_page;
+	//!< Number of currently allocated legacy dynamic UARs
 	uint32_t			curr_legacy_dyn_sys_uar_page;
 	uint16_t			flow_action_flags;
 	uint64_t			max_dm_size;
@@ -419,6 +421,7 @@ struct mlx5_context {
 	uint16_t			qp_max_dedicated_uuars;
 	uint16_t			qp_alloc_dedicated_uuars;
 	uint16_t			qp_max_shared_uuars;
+	//!< Number of shared UARs allocated
 	uint16_t			qp_alloc_shared_uuars;
 	struct mlx5_bf			*nc_uar;
 	void				*cq_uar_reg;
@@ -626,11 +629,17 @@ struct mlx5_devx_uar {
 	struct ibv_context *context;
 };
 
+/**
+ * MLX5: Blue Flame
+ */
 struct mlx5_bf {
 	void			       *reg;
+	//!< Need lock for multi-thread access
 	int				need_lock;
 	struct mlx5_spinlock		lock;
+	//!< Next buffer to write 0 or buf_size for two alternating buffers
 	unsigned			offset;
+	//!< Size of each BF buffer
 	unsigned			buf_size;
 	unsigned			uuarn;
 	off_t				uar_mmap_offset;
@@ -686,7 +695,9 @@ struct mlx5_qp {
 	struct mlx5_bf		       *bf;
 
 	/* Start of new post send API specific fields */
+	//!< Any WR has inline data
 	bool				inl_wqe;
+	//!< Number of setter (SGE, addr for UD, ...) called, if it is equal to WQE_REQ_SETTERS_UD_XRC_DC, mean WQE could be finalized
 	uint8_t				cur_setters_cnt;
 	uint8_t				num_mkey_setters;
 	uint8_t				fm_cache_rb;
@@ -698,11 +709,13 @@ struct mlx5_qp {
 	uint32_t			cur_post_rb;
 	void				*cur_eth;
 	void				*cur_data;
+	//!< CTRL segment of current WQE
 	struct mlx5_wqe_ctrl_seg	*cur_ctrl;
 	struct mlx5_mkey		*cur_mkey;
 	/* End of new post send API specific fields */
 
 	uint8_t				fm_cache;
+	//!< Signal flag for every WQE, can be 0 or MLX5_WQE_CTRL_CQ_UPDATE
 	uint8_t	                        sq_signal_bits;
 	void				*sq_start;
 	struct mlx5_wq                  sq;
@@ -1084,6 +1097,9 @@ static inline struct mlx5_mr *to_mmr(struct ibv_mr *ibmr)
 	return container_of(ibmr, struct mlx5_mr, vmr.ibv_mr);
 }
 
+/**
+ * Dynamic cast from ibv_ah to mlx5_ah.
+ */
 static inline struct mlx5_ah *to_mah(struct ibv_ah *ibah)
 {
 	return to_mxxx(ah, ah);

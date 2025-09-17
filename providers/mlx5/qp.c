@@ -167,6 +167,11 @@ int mlx5_copy_to_send_wqe(struct mlx5_qp *qp, int idx, void *buf, int size)
 	return copy_to_scat(scat, buf, &size, max, ctx);
 }
 
+/**
+ * MLX5: Get start of n-th WQE in SQ.
+ *
+ * Assumes each WQE can be 2^MLX5_SEND_WQE_SHIFT bytes long.
+ */
 void *mlx5_get_send_wqe(struct mlx5_qp *qp, int n)
 {
 	return qp->sq_start + (n << MLX5_SEND_WQE_SHIFT);
@@ -190,12 +195,13 @@ void mlx5_init_qp_indices(struct mlx5_qp *qp)
 /**
  * MLX5: Check if WQ has enough space for nreq new requests
  *
+ * First check without lock, if not enough space, check whether CQ has drawn some WQEs.
+ *
  * @param[in] wq Work Queue to check
  * @param[in] nreq Number of new requests to check for
  * @param[in] cq Completion Queue associated with the WQ
  *
  * @return 0 if there is enough space, 1 if not
- * @todo Why invoke CQ?
  */
 static int mlx5_wq_overflow(struct mlx5_wq *wq, int nreq, struct mlx5_cq *cq)
 {
@@ -212,6 +218,9 @@ static int mlx5_wq_overflow(struct mlx5_wq *wq, int nreq, struct mlx5_cq *cq)
 	return cur + nreq >= wq->max_post;
 }
 
+/**
+ * Set WQE Remote Address Segment
+ */
 static inline void set_raddr_seg(struct mlx5_wqe_raddr_seg *rseg,
 				 uint64_t remote_addr, uint32_t rkey)
 {
@@ -764,6 +773,16 @@ static inline int mlx5_post_send_underlay(struct mlx5_qp *qp, struct ibv_send_wr
 	return 0;
 }
 
+/**
+ * Post send WQEs to HW, ring doorbell.
+ *
+ * @param[inout] qp Queue Pair to post to
+ * @param[inout] bf Blue Flame structure to use for ringing
+ * @param[in] nreq Number of requests posted
+ * @param[in] inl Whether any of the WR had inline data
+ * @param[in] size Total size of all WQEs posted, in 16-byte units
+ * @param[in] ctrl Pointer to CTRL segment of last WQE
+ */
 static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 				int nreq, int inl, int size, void *ctrl)
 {
@@ -809,7 +828,7 @@ static inline void post_send_db(struct mlx5_qp *qp, struct mlx5_bf *bf,
 	 * Flush before toggling bf_offset to be latency oriented.
 	 */
 	mmio_flush_writes();
-	bf->offset ^= bf->buf_size;
+	bf->offset ^= bf->buf_size; // Switch between two buffers
 	if (bf->need_lock)
 		mlx5_spin_unlock(&bf->lock);
 }
@@ -1254,7 +1273,7 @@ static void mlx5_send_wr_abort(struct ibv_qp_ex *ibqp)
 }
 
 /**
- * MLX5: Add a new WQE with mlx5 OpCode.
+ * MLX5: Add a new WQE with mlx5 OpCode, modify CTRL segment.
  * @param[inout] ibqp A pointer to the IB QP EX.
  * @param[in] mlx5_op The mlx5 opcode.
  */
@@ -1296,7 +1315,7 @@ static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp, int ib_op,
 		mqp->sq.wr_data[idx] = 0;
 
 	ctrl = mlx5_get_send_wqe(mqp, idx);
-	*(uint32_t *)((void *)ctrl + 8) = 0;
+	*(uint32_t *)((void *)ctrl + 8) = 0; // Clear signature, dci_stream_channel_id, fm_ce_se
 
 	fence = (ibqp->wr_flags & IBV_SEND_FENCE) ? MLX5_WQE_CTRL_FENCE :
 						    mqp->fm_cache;
@@ -1316,7 +1335,7 @@ static inline void _common_wqe_init_op(struct ibv_qp_ex *ibqp, int ib_op,
 }
 
 /**
- * MLX5: Add a new WQE with verbs OpCode.
+ * MLX5: Add a new WQE with verbs OpCode, modify CTRL segment.
  * @param[inout] ibqp A pointer to the IB QP EX.
  * @param[in] ib_op The verbs opcode.
  */
@@ -1676,6 +1695,9 @@ static void mlx5_send_wr_local_inv(struct ibv_qp_ex *ibqp,
 	_build_umr_wqe(ibqp, invalidate_rkey, 0, &bind_info, IBV_WR_LOCAL_INV);
 }
 
+/**
+ * MLX5: Set SGE in the current WQE.
+ */
 static inline void
 _mlx5_send_wr_set_sge(struct mlx5_qp *mqp, uint32_t lkey, uint64_t addr,
 		      uint32_t length)
