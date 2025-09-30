@@ -1187,8 +1187,11 @@ struct mlx5_cqe64 {
 	uint8_t		app_op;
 	__be16		app_info;
 	__be32		byte_cnt;
+	//!< Hardware timestamp
 	__be64		timestamp;
+	//!< lsb 0-23 for QPN, 24-31
 	__be32		sop_drop_qpn;
+	//!< Counter of Handled WQE, per 64 bytes
 	__be16		wqe_counter;
 	uint8_t		signature;
 	uint8_t		op_own;
@@ -1235,6 +1238,11 @@ uint8_t mlx5dv_get_cqe_format(struct mlx5_cqe64 *cqe)
 	return (cqe->op_own >> 2) & 0x3;
 }
 
+/**
+ * MLX5DV: Get the opcode from the completion queue entry (CQE).
+ * @param[in] cqe The MLX5 CQE.
+ * @return The opcode.
+ */
 static MLX5DV_ALWAYS_INLINE
 uint8_t mlx5dv_get_cqe_opcode(struct mlx5_cqe64 *cqe)
 {

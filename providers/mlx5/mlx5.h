@@ -133,14 +133,20 @@ enum {
 };
 
 enum {
+	//!< Shift for first level of QP hash table, \see mlx5_store_qp
 	MLX5_QP_TABLE_SHIFT		= 12,
+	//!< Mask for second level of QP hash table, \see mlx5_store_qp
 	MLX5_QP_TABLE_MASK		= (1 << MLX5_QP_TABLE_SHIFT) - 1,
+	//!< Size of first level of QP hash table, \see mlx5_store_qp
 	MLX5_QP_TABLE_SIZE		= 1 << (24 - MLX5_QP_TABLE_SHIFT),
 };
 
 enum {
+	//!< Shift for first level of user-index hash table, \see mlx5_store_uidx
 	MLX5_UIDX_TABLE_SHIFT		= 12,
+	//!< Mask for second level of user-index hash table, \see mlx5_store_uidx
 	MLX5_UIDX_TABLE_MASK		= (1 << MLX5_UIDX_TABLE_SHIFT) - 1,
+	//!< Size of first level of user-index hash table, \see mlx5_store_uidx
 	MLX5_UIDX_TABLE_SIZE		= 1 << (24 - MLX5_UIDX_TABLE_SHIFT),
 };
 
@@ -327,8 +333,11 @@ struct mlx5_context {
 	//!< Use BF even if no WQE has inline data
 	int				prefer_bf;
 	int				shut_up_bf;
+	//!< Two-level(MLX5_QP_TABLE_SIZE x 2^MLX5_QP_TABLE_SHIFT) hash table for QPs
 	struct {
+		//!< Second-level hash table
 		struct mlx5_qp        **table;
+		//!< Reference count for this second-level hash table
 		int			refcnt;
 	}				qp_table[MLX5_QP_TABLE_SIZE];
 	pthread_mutex_t			qp_table_mutex;
@@ -339,8 +348,11 @@ struct mlx5_context {
 	}				srq_table[MLX5_SRQ_TABLE_SIZE];
 	pthread_mutex_t			srq_table_mutex;
 
+	//!< Two-level(MLX5_UIDX_TABLE_SIZE x 2^MLX5_UIDX_TABLE_SHIFT) hash table for resources
 	struct {
+		//!< Second-level hash table
 		struct mlx5_resource  **table;
+		//!< Reference count for this second-level hash table
 		int                     refcnt;
 	}				uidx_table[MLX5_UIDX_TABLE_SIZE];
 	pthread_mutex_t                 uidx_table_mutex;
@@ -382,6 +394,7 @@ struct mlx5_context {
 		uint64_t                offset;
 		uint64_t                mask;
 	} core_clock;
+	//!< Address of the HCA core clock, NULL if not available
 	void			       *hca_core_clock;
 	const struct mlx5_ib_clock_info *clock_info_page;
 	struct mlx5_ib_tso_caps		cached_tso_caps;
@@ -484,6 +497,7 @@ struct mlx5_parent_domain {
 };
 
 enum {
+	//!< Set doorbell of consumer index
 	MLX5_CQ_SET_CI	= 0,
 	MLX5_CQ_ARM_DB	= 1,
 };
@@ -509,10 +523,13 @@ struct mlx5_cq {
 	int				active_cqes;
 	struct mlx5_spinlock		lock;
 	uint32_t			cqn;
+	//!< Consumer index (Software)
 	uint32_t			cons_index;
+	//!< Doorbell record (Include hardware consumer index), \see MLX5_CQ_SET_CI
 	__be32			       *dbrec;
 	bool				custom_db;
 	int				arm_sn;
+	//!< Size of completion queue entry
 	int				cqe_sz;
 	int				resize_cqe_sz;
 	int				stall_next_poll;
@@ -602,15 +619,20 @@ struct wr_list {
  * 0 <-----> tail <-----> head (posted here)
  */
 struct mlx5_wq {
+	//!< WR ID of each request, index is per 64 bytes
 	uint64_t		       *wrid;
+	//!< WQE head pointer (per WR), index is per 64 bytes
 	unsigned		       *wqe_head;
 	struct mlx5_spinlock		lock;
+	//!< Length of WQ, per 64 bytes
 	unsigned			wqe_cnt;
-	//!< Max number of WQEs
+	//!< Maximum of posted WQEs, per WQE
 	unsigned			max_post;
-	//!< Index of the last posted WQE
+	//!< Index of the next empty WQE, per WQE
 	unsigned			head;
+	//!< Index of the last uncompleted WQE, per WQE
 	unsigned			tail;
+	//!< Current WQE being pushed, per 64 bytes
 	unsigned			cur_post;
 	int				max_gs;
 	/*
@@ -621,6 +643,7 @@ struct mlx5_wq {
 	int				wqe_shift;
 	int				offset;
 	void			       *qend;
+	//!< WR extra data, index is per 64 bytes
 	uint32_t			*wr_data;
 };
 
@@ -1110,6 +1133,9 @@ static inline int max_int(int a, int b)
 	return a > b ? a : b;
 }
 
+/**
+ * Dynamic cast from mlx5_resource to mlx5_qp.
+ */
 static inline struct mlx5_qp *rsc_to_mqp(struct mlx5_resource *rsc)
 {
 	return (struct mlx5_qp *)rsc;
@@ -1400,6 +1426,12 @@ int mlx5_query_ece(struct ibv_qp *qp, struct ibv_ece *ece);
 struct mlx5_psv *mlx5_create_psv(struct ibv_pd *pd);
 int mlx5_destroy_psv(struct mlx5_psv *psv);
 
+/**
+ * MLX5: Find resource in the context by user-index.
+ * @param[in] ctx The MLX5 context.
+ * @param[in] uidx The user-index to find.
+ * @return The user-index or NULL if not found.
+ */
 static inline void *mlx5_find_uidx(struct mlx5_context *ctx, uint32_t uidx)
 {
 	int tind = uidx >> MLX5_UIDX_TABLE_SHIFT;

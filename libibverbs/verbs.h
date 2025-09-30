@@ -1312,6 +1312,7 @@ struct ibv_wq {
 };
 
 struct ibv_qp {
+	//!< Context for the QP
 	struct ibv_context     *context;
 	void		       *qp_context;
 	struct ibv_pd	       *pd;

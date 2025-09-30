@@ -198,6 +198,8 @@ static int read_number_from_line(const char *line, int *value)
 	return 0;
 }
 /**
+ * @brief Get a free user-index from the context.
+ *
  * The function looks for the first free user-index in all the
  * user-index tables. If all are used, returns -1, otherwise
  * a valid user-index.
@@ -205,6 +207,9 @@ static int read_number_from_line(const char *line, int *value)
  * table is not in use and wasn't allocated yet, therefore the
  * mlx5_store_uidx allocates the table, and increment the reference
  * count on the table.
+ *
+ * @param[in] ctx The MLX5 context.
+ * @return A free user-index or -1 if none are available.
  */
 static int32_t get_free_uidx(struct mlx5_context *ctx)
 {
@@ -260,6 +265,12 @@ int mlx5_get_cmd_status_err(int err, void *out)
 	return err;
 }
 
+/**
+ * MLX5: Store user-index for a resource
+ * @param[inout] ctx The MLX5 context.
+ * @param[in] rsc The resource to store.
+ * @return The user-index or -1 on failure, indicating no available user-index or second-level table cannot be allocated.
+ */
 int32_t mlx5_store_uidx(struct mlx5_context *ctx, void *rsc)
 {
 	int32_t tind;
@@ -2787,6 +2798,9 @@ static const struct verbs_device_ops mlx5_dev_ops = {
 	.import_context = mlx5_import_context,
 };
 
+/**
+ * Determine if the given verbs device is an MLX5 device.
+ */
 static bool is_mlx5_dev(struct ibv_device *device)
 {
 	struct verbs_device *verbs_device = verbs_get_device(device);
@@ -2794,6 +2808,9 @@ static bool is_mlx5_dev(struct ibv_device *device)
 	return verbs_device->ops == &mlx5_dev_ops;
 }
 
+/**
+ * MLX5: Get the device-specific context operations for the given verbs context.
+ */
 struct mlx5_dv_context_ops *mlx5_get_dv_ops(struct ibv_context *ibctx)
 {
 	if (is_mlx5_dev(ibctx->device))

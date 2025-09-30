@@ -47,7 +47,9 @@
 #include "wqe.h"
 
 enum {
+	//!< Any CQE is retrieved
 	CQ_OK					=  0,
+	//!< CQ is empty
 	CQ_EMPTY				= -1,
 	CQ_POLL_ERR				= -2,
 	CQ_POLL_NODATA				= ENOENT
@@ -131,11 +133,23 @@ static void *get_buf_cqe(struct mlx5_buf *buf, int n, int cqe_sz)
 	return buf->buf + n * cqe_sz;
 }
 
+/**
+ * Get the CQE at the specified index.
+ * @param[in] cq The MLX5 CQ.
+ * @param[in] n The index of the CQE to retrieve.
+ * @return The CQE or NULL if not available.
+ */
 static void *get_cqe(struct mlx5_cq *cq, int n)
 {
 	return cq->active_buf->buf + n * cq->cqe_sz;
 }
 
+/**
+ * Get the software CQE at the specified index.
+ * @param[in] cq The MLX5 CQ.
+ * @param[in] n The index of the CQE to retrieve.
+ * @return The CQE or NULL if not available.
+ */
 static void *get_sw_cqe(struct mlx5_cq *cq, int n)
 {
 	void *cqe = get_cqe(cq, n & cq->verbs_cq.cq.cqe);
@@ -151,16 +165,35 @@ static void *get_sw_cqe(struct mlx5_cq *cq, int n)
 	}
 }
 
+/**
+ * Get the next software CQE.
+ * @param[in] cq The MLX5 CQ.
+ * @return The next CQE or NULL if none is available.
+ */
 static void *next_cqe_sw(struct mlx5_cq *cq)
 {
 	return get_sw_cqe(cq, cq->cons_index);
 }
 
+/**
+ * Update the consumer index in the doorbell record (hardware).
+ * @param[in] cq The MLX5 CQ.
+ */
 static void update_cons_index(struct mlx5_cq *cq)
 {
 	cq->dbrec[MLX5_CQ_SET_CI] = htobe32(cq->cons_index & 0xffffff);
 }
 
+/**
+ * @brief Handle a good request completion.
+ *
+ * Fill opcode, wc_flags, byte_len of WC according to the CQE.
+ *
+ * @param[out] wc The IBV work completion.
+ * @param[in] cqe The MLX5 completion queue entry.
+ * @param[in] wq The MLX5 work queue.
+ * @param[in] idx The index of the work request.
+ */
 static inline void handle_good_req(struct ibv_wc *wc, struct mlx5_cqe64 *cqe, struct mlx5_wq *wq, int idx)
 {
 	switch (be32toh(cqe->sop_drop_qpn) >> 24) {
@@ -410,6 +443,14 @@ static void mlx5_get_cycles(uint64_t *cycles)
 }
 #endif
 
+/**
+ * Get the request resource from the context.
+ * @param[in] mctx The MLX5 context.
+ * @param[inout] cur_rsc The current resource.
+ * @param[in] rsn The resource sequence number (user-index).
+ * @param[in] cqe_ver The CQE version.
+ * @return The request resource or NULL if not found.
+ */
 static inline struct mlx5_qp *get_req_context(struct mlx5_context *mctx,
 					      struct mlx5_resource **cur_rsc,
 					      uint32_t rsn, int cqe_ver)
@@ -756,6 +797,7 @@ again:
 		if (unlikely(!mqp))
 			return CQ_POLL_ERR;
 		wq = &mqp->sq;
+		//!< Per 64 bytes
 		idx = wqe_ctr & (wq->wqe_cnt - 1);
 		if (lazy) {
 			uint32_t wc_byte_len;

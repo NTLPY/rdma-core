@@ -4169,6 +4169,14 @@ int mlx5_use_huge(const char *key)
 	return 0;
 }
 
+/**
+ * MLX5: Find a QP in the context.
+ * @param[in] ctx The MLX5 context.
+ * @param[in] qpn The QP number.
+ * @return The QP or NULL if not found.
+ *
+ * @see mlx5_store_qp, mlx5_clear_qp
+ */
 struct mlx5_qp *mlx5_find_qp(struct mlx5_context *ctx, uint32_t qpn)
 {
 	int tind = qpn >> MLX5_QP_TABLE_SHIFT;
@@ -4179,6 +4187,16 @@ struct mlx5_qp *mlx5_find_qp(struct mlx5_context *ctx, uint32_t qpn)
 		return NULL;
 }
 
+/**
+ * MLX5: Store a QP in the context.
+ * @param[inout] ctx The MLX5 context.
+ * @param[in] qpn The QP number.
+ * @param[in] qp The QP to store.
+ * @return 0 on success, -1 on failure, indicating that the second-level hash table could not be created.
+ *
+ * @note Caller should hold mlx5_context::qp_table_mutex.
+ * @see mlx5_find_qp, mlx5_clear_qp
+ */
 int mlx5_store_qp(struct mlx5_context *ctx, uint32_t qpn, struct mlx5_qp *qp)
 {
 	int tind = qpn >> MLX5_QP_TABLE_SHIFT;
@@ -4195,6 +4213,14 @@ int mlx5_store_qp(struct mlx5_context *ctx, uint32_t qpn, struct mlx5_qp *qp)
 	return 0;
 }
 
+/**
+ * MLX5: Clear a QP from the context.
+ * @param[inout] ctx The MLX5 context.
+ * @param[in] qpn The QP number.
+ *
+ * @note Caller should hold mlx5_context::qp_table_mutex.
+ * @see mlx5_find_qp, mlx5_store_qp
+ */
 void mlx5_clear_qp(struct mlx5_context *ctx, uint32_t qpn)
 {
 	int tind = qpn >> MLX5_QP_TABLE_SHIFT;
