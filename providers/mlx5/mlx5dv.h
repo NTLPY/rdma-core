@@ -1123,17 +1123,17 @@ enum {
 
 enum {
 	MLX5_CQE_OWNER_MASK	= 1,
-	MLX5_CQE_REQ		= 0,
-	MLX5_CQE_RESP_WR_IMM	= 1,
-	MLX5_CQE_RESP_SEND	= 2,
-	MLX5_CQE_RESP_SEND_IMM	= 3,
-	MLX5_CQE_RESP_SEND_INV	= 4,
+	MLX5_CQE_REQ		= 0, //!< CQE for a send request
+	MLX5_CQE_RESP_WR_IMM	= 1, //!< CQE for a receive a RDMA Write with imm
+	MLX5_CQE_RESP_SEND	= 2, //!< CQE for a receive a Send
+	MLX5_CQE_RESP_SEND_IMM	= 3, //!< CQE for a receive a Send with imm
+	MLX5_CQE_RESP_SEND_INV	= 4, //!< CQE for a receive a Send with inv
 	MLX5_CQE_RESIZE_CQ	= 5,
 	MLX5_CQE_NO_PACKET	= 6,
 	MLX5_CQE_SIG_ERR	= 12,
 	MLX5_CQE_REQ_ERR	= 13,
 	MLX5_CQE_RESP_ERR	= 14,
-	MLX5_CQE_INVALID	= 15,
+	MLX5_CQE_INVALID	= 15, //!< Invalid CQE, this CQE has not been written by HW
 };
 
 enum {
@@ -1169,9 +1169,12 @@ struct mlx5_cqe64 {
 			uint8_t		rsvd0[2];
 			__be16		wqe_id;
 			uint8_t		rsvd4[13];
+			//!< 0-6 lsbs for DLIB path bits
 			uint8_t		ml_path;
 			uint8_t		rsvd20[4];
+			//!< Source LID
 			__be16		slid;
+			//!< lsb 0-23 for remote QPN, 24-27 for SL, 28-29 for has GRH, 30-31
 			__be32		flags_rqpn;
 			uint8_t		hds_ip_ext;
 			uint8_t		l4_hdr_type_etc;
@@ -1182,6 +1185,7 @@ struct mlx5_cqe64 {
 		struct ibv_tmh tmh;
 	};
 	__be32		srqn_uidx;
+	//!< 0-15 for PKey index
 	__be32		imm_inval_pkey;
 	uint8_t		app;
 	uint8_t		app_op;
@@ -1189,11 +1193,18 @@ struct mlx5_cqe64 {
 	__be32		byte_cnt;
 	//!< Hardware timestamp
 	__be64		timestamp;
-	//!< lsb 0-23 for QPN, 24-31
+	//!< lsb 0-23 for QPN, 24-31 for opcode of WR
 	__be32		sop_drop_qpn;
 	//!< Counter of Handled WQE, per 64 bytes
 	__be16		wqe_counter;
 	uint8_t		signature;
+	//!< lsb 0-3 for flags
+	//!< \see MLX5_CQE_OWNER_MASK
+	//!< \see MLX5_INLINE_SCATTER_32
+	//!< \see MLX5_INLINE_SCATTER_64
+	//!<
+	//!< 4-7 for opcode of CQE
+	//!< \see MLX5_CQE_REQ, MLX5_CQE_RESP_WR_IMM
 	uint8_t		op_own;
 };
 
