@@ -1199,12 +1199,12 @@ struct mlx5_cqe64 {
 	__be16		wqe_counter;
 	uint8_t		signature;
 	//!< lsb 0-3 for flags
-	//!< \see MLX5_CQE_OWNER_MASK
-	//!< \see MLX5_INLINE_SCATTER_32
-	//!< \see MLX5_INLINE_SCATTER_64
+	//!< @see MLX5_CQE_OWNER_MASK
+	//!< @see MLX5_INLINE_SCATTER_32
+	//!< @see MLX5_INLINE_SCATTER_64
 	//!<
 	//!< 4-7 for opcode of CQE
-	//!< \see MLX5_CQE_REQ, MLX5_CQE_RESP_WR_IMM
+	//!< @see MLX5_CQE_REQ, MLX5_CQE_RESP_WR_IMM
 	uint8_t		op_own;
 };
 

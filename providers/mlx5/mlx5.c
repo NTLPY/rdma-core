@@ -614,10 +614,22 @@ static void mlx5_read_env(struct ibv_device *ibdev, struct mlx5_context *ctx)
 
 }
 
+/**
+ * @brief Get total number of UUARs can be allocated.
+ *
+ * The number of UUARs is determined by:
+ * 1. MLX5_TOTAL_UUARS environment variable, if set or MLX5_TOTAL_UUARS if not set, return -EINVAL if less than 1.
+ * 2. Must be at least one system page of UUARs.
+ * 3. Must be aligned to full UARs.
+ * 4. Cannot exceed MLX5_MAX_BFREGS, return -ENOMEM if it does.
+ *
+ * @param page_size System page size.
+ * @return Total number of UUARs or error code if negative.
+ */
 static int get_total_uuars(int page_size)
 {
 	int size = MLX5_DEF_TOT_UUARS;
-	int uuars_in_page;
+	int uuars_in_page; // number of UUARs that fit in one system page
 	char *env;
 
 	env = getenv("MLX5_TOTAL_UUARS");
@@ -627,9 +639,11 @@ static int get_total_uuars(int page_size)
 	if (size < 1)
 		return -EINVAL;
 
+	// Page size of system / Page size of adapter = number of adapter pages per system page
+	// Page size of adapter == size of one UAR register block
 	uuars_in_page = page_size / MLX5_ADAPTER_PAGE_SIZE * MLX5_NUM_NON_FP_BFREGS_PER_UAR;
-	size = max(uuars_in_page, size);
-	size = align(size, MLX5_NUM_NON_FP_BFREGS_PER_UAR);
+	size = max(uuars_in_page, size); // At least one system page of UUARs
+	size = align(size, MLX5_NUM_NON_FP_BFREGS_PER_UAR); // Round up to full UARs
 	if (size > MLX5_MAX_BFREGS)
 		return -ENOMEM;
 
@@ -718,6 +732,16 @@ static int get_shut_up_bf(void)
 	return strcmp(env, "0") ? 1 : 0;
 }
 
+/**
+ * @brief Get number of low latency UUARs can be allocated.
+ *
+ * The number of low latency UUARs is determined by:
+ * 1. MLX5_NUM_LOW_LAT_UUARS environment variable, if set or 4 if not set, return -EINVAL if less than 0.
+ * 2. Must be at least tot_uuars - MLX5_MED_BFREGS_TSHOLD.
+ *
+ * @param tot_uuars Total number of UUARs.
+ * @return Number of low latency UUARs or error code if negative.
+ */
 static int get_num_low_lat_uuars(int tot_uuars)
 {
 	char *env;
@@ -2378,6 +2402,15 @@ mlx5dv_open_device(struct ibv_device *device, struct mlx5dv_context_attr *attr)
 	return verbs_open_device(device, attr);
 }
 
+/**
+ * @brief Get information about UUARs can be allocated.
+ *
+ * @param[in] mdev Pointer to the mlx5 device.
+ * @param[out] tot_uuars Total number of UUARs can be allocated.
+ * @param[out] low_lat_uuars Number of low latency UUARs can be allocated.
+ *
+ * @return 0 on success, -1 on failure and errno is set.
+ */
 static int get_uar_info(struct mlx5_device *mdev,
 			int *tot_uuars, int *low_lat_uuars)
 {

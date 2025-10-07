@@ -133,20 +133,20 @@ enum {
 };
 
 enum {
-	//!< Shift for first level of QP hash table, \see mlx5_store_qp
+	//!< Shift for first level of QP hash table, @see mlx5_store_qp
 	MLX5_QP_TABLE_SHIFT		= 12,
-	//!< Mask for second level of QP hash table, \see mlx5_store_qp
+	//!< Mask for second level of QP hash table, @see mlx5_store_qp
 	MLX5_QP_TABLE_MASK		= (1 << MLX5_QP_TABLE_SHIFT) - 1,
-	//!< Size of first level of QP hash table, \see mlx5_store_qp
+	//!< Size of first level of QP hash table, @see mlx5_store_qp
 	MLX5_QP_TABLE_SIZE		= 1 << (24 - MLX5_QP_TABLE_SHIFT),
 };
 
 enum {
-	//!< Shift for first level of user-index hash table, \see mlx5_store_uidx
+	//!< Shift for first level of user-index hash table, @see mlx5_store_uidx
 	MLX5_UIDX_TABLE_SHIFT		= 12,
-	//!< Mask for second level of user-index hash table, \see mlx5_store_uidx
+	//!< Mask for second level of user-index hash table, @see mlx5_store_uidx
 	MLX5_UIDX_TABLE_MASK		= (1 << MLX5_UIDX_TABLE_SHIFT) - 1,
-	//!< Size of first level of user-index hash table, \see mlx5_store_uidx
+	//!< Size of first level of user-index hash table, @see mlx5_store_uidx
 	MLX5_UIDX_TABLE_SIZE		= 1 << (24 - MLX5_UIDX_TABLE_SHIFT),
 };
 
@@ -325,7 +325,9 @@ struct mlx5_context {
 	struct verbs_context		ibv_ctx;
 	int				max_num_qps;
 	int				bf_reg_size;
+	//!< Total number of UUARs can be allocated
 	int				tot_uuars;
+	//!< Number of low latency UUARs can be allocated
 	int				low_lat_uuars;
 	int				num_uars_per_page;
 	int				bf_regs_per_page;
@@ -416,7 +418,8 @@ struct mlx5_context {
 	struct mlx5dv_sig_caps		sig_caps;
 	struct mlx5_dma_mmo_caps	dma_mmo_caps;
 	struct mlx5dv_crypto_caps	crypto_caps;
-	pthread_mutex_t			dyn_bfregs_mutex; /* protects the dynamic bfregs allocation */
+	//!< Protect dynamic UARs allocation, @see mlx5_get_qp_uar
+	pthread_mutex_t			dyn_bfregs_mutex;
 	uint32_t			num_dyn_bfregs;
 	uint32_t			max_num_legacy_dyn_uar_sys_page;
 	//!< Number of currently allocated legacy dynamic UARs
@@ -429,12 +432,17 @@ struct mlx5_context {
 	uint32_t			flags;
 	struct list_head		dyn_uar_bf_list;
 	struct list_head		dyn_uar_db_list;
+	//!< List of dynamic UUARs dedicated to single QP, @see mlx5_get_qp_uar, mlx5_insert_dyn_uuars
 	struct list_head		dyn_uar_qp_shared_list;
+	//!< List of dynamic UUARs shared by multiple QP, @see mlx5_get_qp_uar, mlx5_insert_dyn_uuars
 	struct list_head		dyn_uar_qp_dedicated_list;
+	//!< Maximum number of UUARs dedicated to single QP, @see mlx5_set_context, mlx5_get_qp_uar
 	uint16_t			qp_max_dedicated_uuars;
+	//!< Number of dedicated UUARs allocated, @see mlx5_get_qp_uar
 	uint16_t			qp_alloc_dedicated_uuars;
+	//!< Maximum number of UUARs shared by multiple QPs, @see mlx5_set_context, mlx5_get_qp_uar
 	uint16_t			qp_max_shared_uuars;
-	//!< Number of shared UARs allocated
+	//!< Number of shared UUARs allocated
 	uint16_t			qp_alloc_shared_uuars;
 	struct mlx5_bf			*nc_uar;
 	void				*cq_uar_reg;
@@ -525,7 +533,7 @@ struct mlx5_cq {
 	uint32_t			cqn;
 	//!< Consumer index (Software)
 	uint32_t			cons_index;
-	//!< Doorbell record (Include hardware consumer index), \see MLX5_CQ_SET_CI
+	//!< Doorbell record (Include hardware consumer index), @see MLX5_CQ_SET_CI
 	__be32			       *dbrec;
 	bool				custom_db;
 	int				arm_sn;
@@ -653,7 +661,7 @@ struct mlx5_devx_uar {
 };
 
 /**
- * MLX5: Blue Flame
+ * MLX5: UAR / UUAR / Doorbell
  */
 struct mlx5_bf {
 	void			       *reg;
@@ -675,6 +683,7 @@ struct mlx5_bf {
 	uint8_t				mmaped_entry : 1;
 	uint8_t				nc_mode : 1;
 	uint8_t				singleton : 1;
+	//!< Dedicated to single QP
 	uint8_t				qp_dedicated : 1;
 	uint8_t				qp_shared : 1;
 	uint32_t			count;

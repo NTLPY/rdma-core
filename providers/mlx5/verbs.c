@@ -59,7 +59,7 @@
 #include "wqe.h"
 #include "mlx5_ifc.h"
 
-//!< Single threaded application flag
+//!< Single threaded application flag, update when a new context is opened
 int mlx5_single_threaded = 0;
 
 static inline int is_xrc_tgt(int type)
@@ -361,6 +361,17 @@ static void mlx5_put_qp_uar(struct mlx5_context *ctx, struct mlx5_bf *bf)
 	pthread_mutex_unlock(&ctx->dyn_bfregs_mutex);
 }
 
+/**
+ * Allocate a UAR from kernel and insert it to the pool.
+ *
+ * @param[in] context The device context.
+ * @param[in] dedicated Whether the UAR is dedicated to single QP.
+ * @return On success, 0. On failure, -1 and errno is set.
+ *
+ * @see mlx5_get_qp_uar
+ * @see mlx5_alloc_dyn_uar
+ * @see mlx5_insert_dyn_uuars
+ */
 static int mlx5_alloc_qp_uar(struct ibv_context *context, bool dedicated)
 {
 	struct mlx5_context *ctx = to_mctx(context);
@@ -379,6 +390,18 @@ static int mlx5_alloc_qp_uar(struct ibv_context *context, bool dedicated)
 	return 0;
 }
 
+/**
+ * @brief Get a UAR for QP use.
+ *
+ * Get a UAR following the policy:
+ * 1. If BlueFlame is not supported or disabled, return the singleton NC UAR.
+ * 2. Try to get a dedicated UUAR from pool.
+ * 3. If no free dedicated UUAR is available, try to allocate an dedicated UAR if the limit is not reached.
+ * 4. If no dedicated UUAR is available, try to allocate a shared UAR if the limit is not reached.
+ * 5. If no shared UUAR is available, return the shared UAR with the least concurrent usage.
+ *
+ * @return On success, a pointer to the allocated UAR structure. On failure, NULL and errno is set.
+ */
 static struct mlx5_bf *mlx5_get_qp_uar(struct ibv_context *context)
 {
 	struct mlx5_context *ctx = to_mctx(context);
@@ -389,16 +412,19 @@ static struct mlx5_bf *mlx5_get_qp_uar(struct ibv_context *context)
 
 	pthread_mutex_lock(&ctx->dyn_bfregs_mutex);
 	do {
+		// First try to get a dedicated UUAR from pool
 		bf = list_pop(&ctx->dyn_uar_qp_dedicated_list, struct mlx5_bf, uar_entry);
 		if (bf)
 			break;
 
+		// If no free dedicated UUAR is available, try to allocate an dedicated UAR
 		if (ctx->qp_alloc_dedicated_uuars < ctx->qp_max_dedicated_uuars) {
 			if (mlx5_alloc_qp_uar(context, true))
 				break;
 			continue;
 		}
 
+		// If no dedicated UUAR is available, try to allocate a shared UAR
 		if (ctx->qp_alloc_shared_uuars < ctx->qp_max_shared_uuars) {
 			if (mlx5_alloc_qp_uar(context, false))
 				break;
@@ -2731,6 +2757,9 @@ static struct ibv_qp *create_qp(struct ibv_context *context,
 		cmd.uidx = usr_idx;
 	}
 
+	/*
+	 * Allocate a blue flame UAR
+	 */
 	mparent_domain = to_mparent_domain(attr->pd);
 	if (mparent_domain && mparent_domain->mtd)
 		bf = mparent_domain->mtd->bf;
