@@ -2269,6 +2269,11 @@ out:
 	return uar->reg;
 }
 
+/**
+ * @brief MLX5DV: Set context attributes.
+ *
+ * Currently only buffer allocators are supported.
+ */
 static int _mlx5dv_set_context_attr(struct ibv_context *ibv_ctx,
 				    enum mlx5dv_set_ctx_attr_type type,
 				    void *attr)
@@ -2297,6 +2302,16 @@ int mlx5dv_set_context_attr(struct ibv_context *ibv_ctx,
 	return dvops->set_context_attr(ibv_ctx, type, attr);
 }
 
+/**
+ * MLX5DV: Get clock info from shared memory page.
+ *
+ * @param[in] ctx_in Pointer to the verbs context.
+ * @param[out] clock_info Pointer to the clock info structure to be filled.
+ *
+ * @return 0 on success, EOPNOTSUPP if not supported, EINVAL if clock info
+ *         page is not available, EBUSY if the clock info is being updated by
+ *         the kernel.
+ */
 static int _mlx5dv_get_clock_info(struct ibv_context *ctx_in,
 				  struct mlx5dv_clock_info *clock_info)
 {
@@ -2331,7 +2346,7 @@ repeat:
 		clock_info->mult   = ci->mult;
 		clock_info->shift  = ci->shift;
 		clock_info->mask   = ci->mask;
-	} while (unlikely(tmp_sig != atomic_load(sig)));
+	} while (unlikely(tmp_sig != atomic_load(sig))); // Ensure consistency
 
 	return 0;
 }

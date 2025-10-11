@@ -1700,6 +1700,7 @@ void mlx5dv_set_eth_seg(struct mlx5_wqe_eth_seg *seg, uint8_t cs_flags,
 }
 
 enum mlx5dv_set_ctx_attr_type {
+	//!< Use custom buffer allocators
 	MLX5DV_CTX_ATTR_BUF_ALLOCATORS = 1,
 };
 
@@ -1709,8 +1710,11 @@ enum {
 };
 
 struct mlx5dv_ctx_allocators {
+	//!< Function pointer to allocate memory buffer
 	void *(*alloc)(size_t size, void *priv_data);
+	//!< Function pointer to free memory buffer
 	void (*free)(void *ptr, void *priv_data);
+	//!< User private data to be passed as second parameter in alloc/free functions
 	void *data;
 };
 

@@ -236,7 +236,9 @@ enum {
 };
 
 struct mlx5_resource {
+	//!< Type of resource
 	enum mlx5_rsc_type	type;
+	//!< Resource number, can be user index or QP number, etc.
 	uint32_t		rsn;
 };
 
@@ -369,6 +371,7 @@ struct mlx5_context {
 	struct list_head		dbr_available_pages;
 	cl_qmap_t		        dbr_map;
 	pthread_mutex_t			dbr_map_mutex;
+	//!< Cache line size of current system (from kernel driver)
 	int				cache_line_size;
 	int				max_sq_desc_sz;
 	int				max_rq_desc_sz;
@@ -376,7 +379,9 @@ struct mlx5_context {
 	int				max_recv_wr;
 	unsigned			max_srq_recv_wr;
 	int				num_ports;
+	//!< Enable CQ stall
 	int				stall_enable;
+	//!< Enable adaptive CQ stall
 	int				stall_adaptive_enable;
 	int				stall_cycles;
 	struct mlx5_bf		       *bfs;
@@ -404,6 +409,9 @@ struct mlx5_context {
 	uint32_t			uar_size;
 	uint64_t			vendor_cap_flags; /* Use enum mlx5_vendor_cap_flags */
 	struct mlx5dv_cqe_comp_caps	cqe_comp_caps;
+	//!< Custom memory allocators
+	//!<
+	//!< @see mlx5dv_set_context_attr
 	struct mlx5dv_ctx_allocators	extern_alloc;
 	struct mlx5dv_sw_parsing_caps	sw_parsing_caps;
 	struct mlx5dv_striding_rq_caps	striding_rq_caps;
@@ -514,7 +522,9 @@ enum {
 	MLX5_CQ_FLAGS_RX_CSUM_VALID = 1 << 0,
 	MLX5_CQ_FLAGS_EMPTY_DURING_POLL = 1 << 1,
 	MLX5_CQ_FLAGS_FOUND_CQES = 1 << 2,
+	//!< Use extended CQ, @see ibv_create_cq_ex
 	MLX5_CQ_FLAGS_EXTENDED = 1 << 3,
+	//!< Do not try to lock spinlock, @see ibv_create_cq_ex IBV_CREATE_CQ_ATTR_SINGLE_THREADED
 	MLX5_CQ_FLAGS_SINGLE_THREADED = 1 << 4,
 	MLX5_CQ_FLAGS_DV_OWNED = 1 << 5,
 	MLX5_CQ_FLAGS_TM_SYNC_REQ = 1 << 6,
@@ -541,8 +551,10 @@ struct mlx5_cq {
 	int				cqe_sz;
 	int				resize_cqe_sz;
 	int				stall_next_poll;
+	//!< Enable CQ stall
 	int				stall_enable;
 	uint64_t			stall_last_count;
+	//!< Enable adaptive CQ stall
 	int				stall_adaptive_enable;
 	int				stall_cycles;
 	struct mlx5_resource		*cur_rsc;
@@ -1087,6 +1099,9 @@ static inline struct mlx5_cq *to_mcq(struct ibv_cq *ibcq)
 	return container_of(ibcq, struct mlx5_cq, verbs_cq.cq);
 }
 
+/**
+ * Dynamic cast from ibv_srq to mlx5_srq.
+ */
 static inline struct mlx5_srq *to_msrq(struct ibv_srq *ibsrq)
 {
 	struct verbs_srq *vsrq = (struct verbs_srq *)ibsrq;

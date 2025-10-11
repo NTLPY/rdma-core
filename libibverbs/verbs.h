@@ -2086,6 +2086,7 @@ enum ibv_cq_init_attr_mask {
 };
 
 enum ibv_create_cq_attr_flags {
+	//!< Requires no lock, @see ibv_create_cq_ex MLX5_CQ_FLAGS_SINGLE_THREADED
 	IBV_CREATE_CQ_ATTR_SINGLE_THREADED = 1 << 0,
 	IBV_CREATE_CQ_ATTR_IGNORE_OVERRUN  = 1 << 1,
 };

@@ -2890,6 +2890,14 @@ struct ibv_qp *mlx5_create_qp(struct ibv_pd *pd,
 	return qp;
 }
 
+/**
+ * @brief MLX5: Lock both CQs associated with a QP
+ *
+ * Locks are taken in ascending order of CQ number to prevent deadlocks.
+ *
+ * @param[inout] qp MLX5 QP
+ * @see mlx5_unlock_cqs, mlx5_spin_lock
+ */
 static void mlx5_lock_cqs(struct ibv_qp *qp)
 {
 	struct mlx5_cq *send_cq = to_mcq(qp->send_cq);
@@ -2912,6 +2920,14 @@ static void mlx5_lock_cqs(struct ibv_qp *qp)
 	}
 }
 
+/**
+ * @brief MLX5: Unlock both CQs associated with a QP
+ *
+ * Unlocks are done in reverse order of locking to prevent deadlocks.
+ *
+ * @param qp MLX5 QP
+ * @see mlx5_lock_cqs, mlx5_spin_unlock
+ */
 static void mlx5_unlock_cqs(struct ibv_qp *qp)
 {
 	struct mlx5_cq *send_cq = to_mcq(qp->send_cq);

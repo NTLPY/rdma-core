@@ -61,7 +61,9 @@ struct ibv_mem_node {
 static struct ibv_mem_node *mm_root;
 static pthread_mutex_t mm_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int page_size;
+//!< Indicate that huge pages are enabled for fork init
 static int huge_page_enabled;
+//!< Indicate that fork init cannot be called due to memory allocations already done
 static int too_late;
 
 static unsigned long smaps_page_size(FILE *file)
