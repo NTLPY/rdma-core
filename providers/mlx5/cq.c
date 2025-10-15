@@ -1143,6 +1143,49 @@ static inline void _mlx5_end_poll(struct ibv_cq_ex *ibcq,
 	}
 }
 
+/**
+ * MLX5: Start polling the CQ.
+ *
+ * @param[inout] ibcq The ibv_cq_ex to poll from.
+ * @param[in] attr Attributes for polling. Currently must be zeroed.
+ * @param[in] lock Take the CQ lock.
+ * @param[in] stall Stall mode.
+ * @param[in] cqe_version CQE version (0 or 1).
+ * @param[in] clock_update If true, update the last_clock_info field of the context.
+ *
+ * @returns 0 on success, ENOENT if no CQE was found or other errors see below.
+ *
+ * @note
+ *
+ * - After a successful call, the caller may call mlx5_next_poll to poll
+ *   the next CQE.
+ *
+ * - After ENOENT, no CQE was found, the caller may start polling again
+ *   by calling mlx5_start_poll.
+ *
+ * - After EINVAL, the caller should not call mlx5_next_poll, but may
+ *   start polling again by calling mlx5_start_poll.
+ *
+ * - After EBUSY, which indicate update of clock info failed, the first CQE is
+ *   skipped without notifying hardware and the work queue will be updated,
+ *   caller may query this CQE by calling ibv_wc_* and start polling next CQE
+ *   by calling mlx5_next_poll.
+ *
+ * - After CQ_POLL_ERR, the first CQE is broken and is skipped without
+ *   notifying hardware and the work queue may not be updated, caller cannot
+ *   query this CQE and should start polling next CQE by calling mlx5_next_poll.
+ *
+ * - After CQ_POLL_NODATA, the first CQE is handled internally and is skipped
+ *   without notifying hardware, caller should treat this as no CQE was found
+ *   (ENOENT).
+ *
+ * | Behaviour               | 0 | ENOENT | CQ_POLL_NODATA | CQ_POLL_ERR | EINVAL | EBUSY | other errno  |
+ * |-------------------------|---|--------|----------------|-------------|--------|-------|--------------|
+ * | Mov Con Index           | ✔ |   ✘    |       ✔        |      ✔      |   ✘    |   ✔   |      ?       |
+ * | Can Poll Next           | ✔ |   ✘    |       ✘        |      ✘      |   ✘    |   ✘   |      ?       |
+ * | Parsed any CQE          | ✔ |   ✘    |       ✔        |      ✔      |   ✘    |   ✔   |      ?       |
+ * | Off. of next polled CQE | 0 |   0    |       +1       |      +1     |   0    |   +1  |      ?       |
+ */
 static inline int mlx5_start_poll(struct ibv_cq_ex *ibcq, struct ibv_poll_cq_attr *attr,
 				  int lock, enum polling_mode stall,
 				  int cqe_version, int clock_update)
@@ -1737,6 +1780,11 @@ static inline uint8_t mlx5_cq_read_wc_dlid_path_bits(struct ibv_cq_ex *ibcq)
 	return cq->cqe64->ml_path & 0x7f;
 }
 
+/**
+ * MLX5: Read the timestamp from the work completion entry.
+ *
+ * The timestamp is in device clock cycles.
+ */
 static inline uint64_t mlx5_cq_read_wc_completion_ts(struct ibv_cq_ex *ibcq)
 {
 	struct mlx5_cq *cq = to_mcq(ibv_cq_ex_to_cq(ibcq));
@@ -1744,6 +1792,12 @@ static inline uint64_t mlx5_cq_read_wc_completion_ts(struct ibv_cq_ex *ibcq)
 	return be64toh(cq->cqe64->timestamp);
 }
 
+/**
+ * MLX5: Read the wallclock timestamp from the work completion entry.
+ *
+ * The timestamp is read from the CQE and converted to nanoseconds using
+ * the clock info retrieved from the device.
+ */
 static inline uint64_t
 mlx5_cq_read_wc_completion_wallclock_ns(struct ibv_cq_ex *ibcq)
 {

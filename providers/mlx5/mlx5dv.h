@@ -1729,10 +1729,12 @@ int mlx5dv_set_context_attr(struct ibv_context *context,
 
 struct mlx5dv_clock_info {
 	uint64_t nsec;
+	//!< Last read cycles from device
 	uint64_t last_cycles;
 	uint64_t frac;
 	uint32_t mult;
 	uint32_t shift;
+	//!< Bit mask for the device clock counter
 	uint64_t mask;
 };
 
