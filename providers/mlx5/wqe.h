@@ -130,7 +130,16 @@ struct mlx5_wqe_signature_seg {
 	uint8_t		rsvd1[11];
 };
 
+/**
+ * MLX5: WQE Inline Data Segment
+ *
+ * Packed / Padded size: 4 bytes
+ *
+ * \see mlx5_wqe_data_seg
+ * \see MLX5_INLINE_SEG
+ */
 struct mlx5_wqe_inline_seg {
+	//!< Length of inline data (< MLX5_INLINE_SEG), MLX5_INLINE_SEG bit must be set
 	__be32		byte_count;
 };
 

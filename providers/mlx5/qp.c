@@ -1696,7 +1696,7 @@ static void mlx5_send_wr_local_inv(struct ibv_qp_ex *ibqp,
 }
 
 /**
- * MLX5: Set SGE in the current WQE.
+ * MLX5: Set a single SGE in the current WQE.
  */
 static inline void
 _mlx5_send_wr_set_sge(struct mlx5_qp *mqp, uint32_t lkey, uint64_t addr,
@@ -1714,6 +1714,9 @@ _mlx5_send_wr_set_sge(struct mlx5_qp *mqp, uint32_t lkey, uint64_t addr,
 	mqp->cur_size += sizeof(*dseg) / 16;
 }
 
+/**
+ * MLX5: Set a single SGE in the current WQE for RC and UC QPs.
+ */
 static void
 mlx5_send_wr_set_sge_rc_uc(struct ibv_qp_ex *ibqp, uint32_t lkey,
 			   uint64_t addr, uint32_t length)
@@ -1881,6 +1884,14 @@ mlx5_send_wr_set_sge_list_eth(struct ibv_qp_ex *ibqp, size_t num_sge,
 	_common_wqe_finalize(mqp);
 }
 
+/**
+ * Copy data to WQE, handling possible wrap-around.
+ *
+ * @param[in] mqp Pointer to the mlx5_qp structure.
+ * @param[in] dest Destination pointer within the WQE.
+ * @param[in] src Source pointer of the data to copy.
+ * @param[in] n Number of bytes to copy.
+ */
 static inline void memcpy_to_wqe(struct mlx5_qp *mqp, void *dest, void *src,
 				 size_t n)
 {
@@ -1911,6 +1922,9 @@ static inline void memcpy_to_wqe_and_update(struct mlx5_qp *mqp, void **dest,
 	*dest += n;
 }
 
+/**
+ * MLX5: Set single inline data in the current WQE.
+ */
 static inline void
 _mlx5_send_wr_set_inline_data(struct mlx5_qp *mqp, void *addr, size_t length)
 {
@@ -1939,6 +1953,9 @@ _mlx5_send_wr_set_inline_data(struct mlx5_qp *mqp, void *addr, size_t length)
 	mqp->cur_size += DIV_ROUND_UP(length + sizeof(*dseg), 16);
 }
 
+/**
+ * MLX5: Set single inline data in the current WQE for RC and UC QPs.
+ */
 static void
 mlx5_send_wr_set_inline_data_rc_uc(struct ibv_qp_ex *ibqp, void *addr,
 				   size_t length)
@@ -3586,6 +3603,9 @@ static void fill_wr_builders_eth(struct ibv_qp_ex *ibqp)
 	ibqp->wr_send_tso = mlx5_send_wr_send_tso;
 }
 
+/**
+ * Fill in the WR setters for RC and UC QPs
+ */
 static void fill_wr_setters_rc_uc(struct ibv_qp_ex *ibqp)
 {
 	ibqp->wr_set_sge = mlx5_send_wr_set_sge_rc_uc;
@@ -3594,6 +3614,9 @@ static void fill_wr_setters_rc_uc(struct ibv_qp_ex *ibqp)
 	ibqp->wr_set_inline_data_list = mlx5_send_wr_set_inline_data_list_rc_uc;
 }
 
+/**
+ * Fill in the WR setters for UD, XRC and DCI QPs
+ */
 static void fill_wr_setters_ud_xrc_dc(struct ibv_qp_ex *ibqp)
 {
 	ibqp->wr_set_sge = mlx5_send_wr_set_sge_ud_xrc_dc;

@@ -1288,6 +1288,7 @@ enum {
 };
 
 enum {
+	//!< Indicates that this WQE segment is Inline Data Segment, not a Data Segment
 	MLX5_INLINE_SEG	= 0x80000000,
 };
 
@@ -1307,8 +1308,11 @@ struct mlx5_wqe_srq_next_seg {
  * MLX5: WQE Data Segment
  *
  * Packed / Padded size: 16 bytes
+ *
+ * \see mlx5_wqe_inline_seg
  */
 struct mlx5_wqe_data_seg {
+	//!< Length of data (< MLX5_INLINE_SEG)
 	__be32			byte_count;
 	__be32			lkey;
 	__be64			addr;

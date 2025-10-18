@@ -731,6 +731,7 @@ struct mlx5_qp {
 	//!< Pointer to the ibv_qp
 	struct ibv_qp		       *ibv_qp;
 	struct mlx5_buf                 buf;
+	//!< Maximum inline data length
 	int                             max_inline_data;
 	int                             buf_size;
 	/* For Raw Packet QP, use different buffers for the SQ and RQ */
@@ -749,6 +750,7 @@ struct mlx5_qp {
 	int				err;
 	//!< Number of requests in current post send
 	int				nreq;
+	//!< Size of current WQE, per 16 bytes
 	uint32_t			cur_size;
 	uint32_t			cur_post_rb;
 	void				*cur_eth;
